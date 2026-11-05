@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Clear Reps</title>
+<meta name="description" content="Clarity in the gym: what to do next, how to do it, and whether you're progressing.">
+<meta name="theme-color" content="#F6F7FA">
+<meta name="color-scheme" content="light">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Clear Reps">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="wrap" id="app" aria-live="polite"></div>
+<div class="rest" id="rest" hidden></div>
+<nav class="tabs" id="tabs" aria-label="Sections"></nav>
+<div class="sheet" id="sheet" hidden></div>
+<div class="toast" id="toast" hidden></div>
+<div class="zoom" id="zoom" hidden></div>
+<script src="vendor/supabase.js" defer></script>
+<script src="js/config.js" defer></script>
+<script src="js/body.js" defer></script>
+<script src="js/store.js" defer></script>
+<script src="js/app.js" defer></script>
+<script>
+if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+</script>
+</body>
+</html>

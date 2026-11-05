@@ -1,0 +1,479 @@
+{
+ "settings": {
+  "customEx": {
+   "cx_plankupdown": {
+    "m": "abs",
+    "mm": [
+     "triceps",
+     "shoulders"
+    ],
+    "n": "Plank up-downs",
+    "needs": [],
+    "r": [
+     8,
+     12
+    ],
+    "s": [
+     "chest"
+    ],
+    "weighted": false
+   },
+   "cx_shouldertaps": {
+    "m": "abs",
+    "mm": [
+     "shoulders"
+    ],
+    "n": "Shoulder taps",
+    "needs": [],
+    "r": [
+     16,
+     20
+    ],
+    "s": [
+     "triceps",
+     "chest"
+    ],
+    "weighted": false
+   },
+   "cx_squatohp": {
+    "m": "quads",
+    "mm": [
+     "shoulders",
+     "glutes"
+    ],
+    "n": "Squat to overhead press",
+    "needs": [],
+    "r": [
+     8,
+     12
+    ],
+    "s": [
+     "triceps",
+     "abs",
+     "upper_back"
+    ],
+    "weighted": true
+   }
+  },
+  "libEx": {
+   "lx_Crossover_Reverse_Lunge": {
+    "c": 2,
+    "cat": "stretching",
+    "cues": [
+     "Stand with your feet shoulder width apart.",
+     "Perform a rear lunge by stepping back with one foot and flexing the hips and front knee.",
+     "After a brief pause, return to the starting position and repeat on the other side, continuing in an\u2026"
+    ],
+    "eq": "other",
+    "id": "Crossover_Reverse_Lunge",
+    "lv": "intermediate",
+    "m": [
+     "lower back"
+    ],
+    "mech": "",
+    "n": "Crossover Reverse Lunge",
+    "ni": 2,
+    "s": [
+     "abdominals",
+     "abductors",
+     "glutes",
+     "hamstrings",
+     "quadriceps"
+    ]
+   },
+   "lx_Dip_Machine": {
+    "c": 3,
+    "cat": "strength",
+    "cues": [
+     "Sit securely in a dip machine, select the weight and firmly grasp the handles.",
+     "Now keep your elbows in at your sides in order to place emphasis on the triceps.",
+     "As you contract the triceps, extend your arms downwards as you exhale."
+    ],
+    "eq": "machine",
+    "id": "Dip_Machine",
+    "lv": "beginner",
+    "m": [
+     "triceps"
+    ],
+    "mech": "compound",
+    "n": "Dip Machine",
+    "ni": 2,
+    "s": [
+     "chest",
+     "shoulders"
+    ]
+   },
+   "lx_Elbow_to_Knee": {
+    "c": 4,
+    "cat": "strength",
+    "cues": [
+     "Lie on the floor, crossing your right leg across your bent left knee.",
+     "Perform the motion by flexing the spine and rotating your torso to bring the left elbow to the right knee.",
+     "Return to the starting position and repeat the movement for the desired number of repetitions before\u2026"
+    ],
+    "eq": "body only",
+    "id": "Elbow_to_Knee",
+    "lv": "beginner",
+    "m": [
+     "abdominals"
+    ],
+    "mech": "compound",
+    "n": "Elbow to Knee",
+    "ni": 2,
+    "s": []
+   },
+   "lx_Kettlebell_Thruster": {
+    "c": 5,
+    "cat": "strength",
+    "cues": [
+     "Clean two kettlebells to your shoulders.",
+     "Begin to squat by flexing your hips and knees, lowering your hips between your legs.",
+     "At the bottom, reverse direction and squat by extending your knees and hips, driving through your heels."
+    ],
+    "eq": "kettlebells",
+    "id": "Kettlebell_Thruster",
+    "lv": "intermediate",
+    "m": [
+     "shoulders"
+    ],
+    "mech": "compound",
+    "n": "Kettlebell Thruster",
+    "ni": 2,
+    "s": [
+     "quadriceps",
+     "triceps"
+    ]
+   },
+   "lx_Reverse_Machine_Flyes": {
+    "c": 9,
+    "cat": "strength",
+    "cues": [
+     "Adjust the handles so that they are fully to the rear.",
+     "In a semicircular motion, pull your hands out to your side and back, contracting your rear delts.",
+     "Keep your arms slightly bent throughout the movement, with all of the motion occurring at the shoulder joint."
+    ],
+    "eq": "machine",
+    "id": "Reverse_Machine_Flyes",
+    "lv": "beginner",
+    "m": [
+     "shoulders"
+    ],
+    "mech": "isolation",
+    "n": "Reverse Machine Flyes",
+    "ni": 2,
+    "s": []
+   }
+  },
+  "programStart": "2026-11-03",
+  "wstep": {
+   "cx_squatohp": 2,
+   "lx_Dip_Machine": 2
+  }
+ },
+ "workouts": [
+  {
+   "cool": {
+    "0": false
+   },
+   "date": "2026-11-04",
+   "dayId": "free",
+   "dayName": "Free session \u00b7 Chest, Shoulders, Arms, Legs, Glutes, Core",
+   "durationMin": 44,
+   "exList": [
+    "cx_squatohp",
+    "lx_Reverse_Machine_Flyes",
+    "pushup",
+    "lateral",
+    "lx_Elbow_to_Knee",
+    "lx_Crossover_Reverse_Lunge",
+    "lunge",
+    "lx_Dip_Machine",
+    "cx_shouldertaps",
+    "cx_plankupdown",
+    "plank"
+   ],
+   "finishedAt": "2026-11-04T07:27:37.999Z",
+   "missing": [],
+   "rpe": 7,
+   "sets": [
+    {
+     "done": true,
+     "ex": "cx_squatohp",
+     "feel": "good",
+     "k": "mw1r5ggsq8ph0",
+     "r": 12,
+     "rir": "2",
+     "w": 6
+    },
+    {
+     "done": true,
+     "ex": "cx_squatohp",
+     "feel": "good",
+     "k": "mw1r5ggsp7wj4",
+     "r": 8,
+     "rir": "2",
+     "w": 6
+    },
+    {
+     "done": true,
+     "ex": "cx_squatohp",
+     "feel": "good",
+     "k": "mw1rdg8nbqpbe",
+     "r": 8,
+     "rir": "2",
+     "w": 6
+    },
+    {
+     "done": true,
+     "ex": "lx_Reverse_Machine_Flyes",
+     "feel": "good",
+     "k": "mw1rdxarl2z0d",
+     "r": 10,
+     "rir": "2",
+     "w": 25
+    },
+    {
+     "done": true,
+     "ex": "lx_Reverse_Machine_Flyes",
+     "feel": "good",
+     "k": "mw1rdxaruda28",
+     "r": 8,
+     "rir": "2",
+     "w": 25
+    },
+    {
+     "done": true,
+     "ex": "lx_Reverse_Machine_Flyes",
+     "feel": "good",
+     "k": "mw1reazz6qqpp",
+     "r": 8,
+     "rir": "2",
+     "w": 25
+    },
+    {
+     "done": true,
+     "ex": "pushup",
+     "feel": "good",
+     "k": "mw1rejoj5fcah",
+     "r": 10,
+     "rir": "2",
+     "w": 0
+    },
+    {
+     "done": true,
+     "ex": "pushup",
+     "feel": "good",
+     "k": "mw1rejojjo01n",
+     "r": 6,
+     "rir": "2",
+     "w": 0
+    },
+    {
+     "done": true,
+     "ex": "pushup",
+     "feel": "good",
+     "k": "mw1rer9cn7k79",
+     "r": 6,
+     "rir": "2",
+     "w": 0
+    },
+    {
+     "done": true,
+     "ex": "lateral",
+     "feel": "good",
+     "k": "mw1rhj4dayaii",
+     "r": 12,
+     "rir": "2",
+     "w": 6
+    },
+    {
+     "done": true,
+     "ex": "lateral",
+     "feel": "good",
+     "k": "mw1rhj4d7fa9s",
+     "r": 12,
+     "rir": "2",
+     "w": 6
+    },
+    {
+     "done": true,
+     "ex": "lateral",
+     "feel": "good",
+     "k": "mw1rmh32gbf2c",
+     "r": 12,
+     "rir": "2",
+     "w": 6
+    },
+    {
+     "done": true,
+     "ex": "lx_Elbow_to_Knee",
+     "feel": "tough",
+     "k": "mw1rnpro8ica8",
+     "r": 15,
+     "rir": "0",
+     "w": 0
+    },
+    {
+     "done": true,
+     "ex": "lx_Elbow_to_Knee",
+     "feel": "tough",
+     "k": "mw1rnprobwhzo",
+     "r": 15,
+     "rir": "0",
+     "w": 0
+    },
+    {
+     "done": true,
+     "ex": "lx_Elbow_to_Knee",
+     "feel": "tough",
+     "k": "mw1rny8bxchkw",
+     "r": 15,
+     "rir": "0",
+     "w": 0
+    },
+    {
+     "done": true,
+     "ex": "lunge",
+     "feel": "good",
+     "k": "mw1rvu98fz3rw",
+     "r": 10,
+     "rir": "2",
+     "w": 2
+    },
+    {
+     "done": true,
+     "ex": "lunge",
+     "feel": "good",
+     "k": "mw1rvu98tp4j1",
+     "r": 8,
+     "rir": "2",
+     "w": 2
+    },
+    {
+     "done": true,
+     "ex": "lunge",
+     "feel": "good",
+     "k": "mw1s27ebp1fxp",
+     "r": 10,
+     "rir": "2",
+     "w": 2
+    },
+    {
+     "done": true,
+     "ex": "lx_Dip_Machine",
+     "feel": "good",
+     "k": "mw1s3ijbbmmlq",
+     "r": 12,
+     "rir": "2",
+     "w": 60
+    },
+    {
+     "done": true,
+     "ex": "lx_Dip_Machine",
+     "feel": "tough",
+     "k": "mw1s3ijbuft2n",
+     "r": 12,
+     "rir": "0",
+     "w": 60
+    },
+    {
+     "done": true,
+     "ex": "lx_Dip_Machine",
+     "feel": "tough",
+     "k": "mw1s3zrgnnp2j",
+     "r": 12,
+     "rir": "0",
+     "w": 60
+    },
+    {
+     "done": true,
+     "ex": "cx_shouldertaps",
+     "feel": "good",
+     "k": "mw1shtz99dl3p",
+     "r": 10,
+     "rir": "2",
+     "w": 0
+    },
+    {
+     "done": true,
+     "ex": "cx_shouldertaps",
+     "feel": "good",
+     "k": "mw1si1u6gq94z",
+     "r": 10,
+     "rir": "2",
+     "w": 0
+    },
+    {
+     "done": true,
+     "ex": "cx_shouldertaps",
+     "feel": "good",
+     "k": "mw1si55295g3o",
+     "r": 10,
+     "rir": "2",
+     "w": 0
+    },
+    {
+     "done": true,
+     "ex": "cx_plankupdown",
+     "feel": "tough",
+     "k": "mw1sihmgz5vq0",
+     "r": 10,
+     "rir": "0",
+     "w": 0
+    },
+    {
+     "done": true,
+     "ex": "cx_plankupdown",
+     "feel": "tough",
+     "k": "mw1sihmg4ld6w",
+     "r": 8,
+     "rir": "0",
+     "w": 0
+    },
+    {
+     "done": true,
+     "ex": "cx_plankupdown",
+     "feel": "good",
+     "k": "mw1sinzbqwoix",
+     "r": 10,
+     "rir": "2",
+     "w": 0
+    },
+    {
+     "done": true,
+     "ex": "plank",
+     "feel": "tough",
+     "k": "mw1sjhuzowcdn",
+     "r": 30,
+     "rir": "0",
+     "w": 0
+    },
+    {
+     "done": true,
+     "ex": "plank",
+     "feel": "tough",
+     "k": "mw1sjhuz1t5ve",
+     "r": 30,
+     "rir": "0",
+     "w": 0
+    },
+    {
+     "done": true,
+     "ex": "plank",
+     "feel": "good",
+     "k": "mw1sjtgh18gw0",
+     "r": 30,
+     "rir": "2",
+     "w": 0
+    }
+   ],
+   "startedAt": "2026-11-04T06:43:55.002Z",
+   "status": "done",
+   "swaps": {},
+   "warm": {},
+   "week": 1,
+   "id": "mw1r3qiiueu97"
+  }
+ ],
+ "checkins": []
+}
