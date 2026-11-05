@@ -112,7 +112,7 @@ const Store = (() => {
         sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
         state.configured = true;
         sb.auth.getSession().then(({ data }) => { session = data.session; emit("auth"); if (session) scheduleSync(300); });
-        sb.auth.onAuthStateChange((_e, s) => { const was = !!session; session = s; emit("auth"); if (s && !was) scheduleSync(300); });
+        sb.auth.onAuthStateChange((e, s) => { const was = !!session; session = s; if (e === "PASSWORD_RECOVERY") state.recovery = true; emit("auth"); if (s && !was) scheduleSync(300); });
         return true;
       } catch (e) { console.warn(e); return false; }
     },
@@ -134,6 +134,15 @@ const Store = (() => {
       const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: location.href.split("#")[0].split("?")[0] } });
       if (error) throw error;
       return !!data.session;
+    },
+    async sendReset(email) {
+      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.href.split("#")[0].split("?")[0] });
+      if (error) throw error;
+    },
+    async setPassword(password) {
+      const { error } = await sb.auth.updateUser({ password });
+      if (error) throw error;
+      state.recovery = false;
     },
     async signOut() { try { await sb.auth.signOut(); } catch (e) {} session = null; emit("auth"); },
     syncNow: () => runSync(true),
