@@ -473,3 +473,5 @@ html.kb .tabs, html.kb .dock{display:none}
 .wdex .tiny{margin:0}
 .wdetail h3{margin:0}
 .mchip b{margin-left:4px}
+.bodycard h3{margin:0}
+.bodycard{display:flex;flex-direction:column;gap:8px}

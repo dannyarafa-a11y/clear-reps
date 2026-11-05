@@ -544,15 +544,16 @@ function viewToday(){
   ${healthStrip()}
   <section class="hero">
     <div class="hero-top"><div><div class="eyebrow">Next workout · ${esc(dayTag(day))}</div><h2 class="big">${esc(day.name)}</h2></div><div class="mins"><b>${mins}</b><span>min</span></div></div>
-    ${(()=>{ const mode=S.homeMap||"week", st=muscleStatus({noActive:true});
-      return `<div class="seg" role="tablist"><button role="tab" class="${mode==="week"?"on":""}" data-act="home-map" data-v="week" aria-selected="${mode==="week"}">Last 7 days</button><button role="tab" class="${mode==="plan"?"on":""}" data-act="home-map" data-v="plan" aria-selected="${mode==="plan"}">This workout</button></div>
-      <div class="hero-fig">${mode==="week"?bodyFig(statusLevels(st)):bodyFig(intensityLevels(setsPerMuscle(res.ex.map((id,i)=>[id,adjBy[id]??setsFor(day,day.ex[i],ph)]))))}</div>
-      ${mode==="week"?`${loadLegend()}${insightLines(bodyInsight(st))}`:intensityKey()}`; })()}
+    <div class="hero-fig">${bodyFig(intensityLevels(setsPerMuscle(res.ex.map((id,i)=>[id,adjBy[id]??setsFor(day,day.ex[i],ph)]))))}</div>
+    ${intensityKey()}
     <div class="hero-meta"><span>${res.ex.length} exercises</span><span>${day.custom||adj.length?nSets+" sets":ph.sets+" sets each"}</span><span>${esc(ph.name)}</span>${nSwap?`<span>${nSwap} swapped for your gym</span>`:""}${adj.length?`<span class="adj">${adj.length} adjusted for this week</span>`:""}</div>
     ${S.active&&S.paused?"":`<button class="btn primary xl block" data-act="start" data-day="${esc(day.id)}" ${can?"":"disabled"}>Start workout</button>
     <button class="btn block" data-act="free" ${can?"":"disabled"}>Just train (add exercises as you go)</button>`}
     <button class="link" data-act="pick-day">See exercises, pick another day, or make your own</button>
   </section>
+  ${(()=>{ const st=muscleStatus({noActive:true}); return `<section class="card bodycard"><div class="eyebrow">Your body</div><h3>Last 7 days</h3>
+    <p class="small muted" style="margin:0">Every workout you log, fading out a day at a time.</p>
+    <div class="hero-fig">${bodyFig(statusLevels(st))}</div>${loadLegend()}${insightLines(bodyInsight(st))}</section>`; })()}
   <section class="tip"><div class="eyebrow">This phase</div><p>${esc(ph.note)}</p></section>`;
 }
 function dayCard(d,ph,can,nid){
