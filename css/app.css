@@ -475,3 +475,7 @@ html.kb .tabs, html.kb .dock{display:none}
 .mchip b{margin-left:4px}
 .bodycard h3{margin:0}
 .bodycard{display:flex;flex-direction:column;gap:8px}
+.meter.grad{height:10px;border-radius:999px;position:relative}
+.meter.grad b{position:absolute;top:-4px;width:4px;height:18px;border-radius:2px;background:var(--ink);transform:translateX(-50%)}
+.meter.grad i{display:none}
+.meter.grad::before{display:none}

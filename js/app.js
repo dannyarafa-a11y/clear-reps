@@ -551,9 +551,7 @@ function viewToday(){
     <button class="btn block" data-act="free" ${can?"":"disabled"}>Just train (add exercises as you go)</button>`}
     <button class="link" data-act="pick-day">See exercises, pick another day, or make your own</button>
   </section>
-  ${(()=>{ const st=muscleStatus({noActive:true}); return `<section class="card bodycard"><div class="eyebrow">Your body</div><h3>Last 7 days</h3>
-    <p class="small muted" style="margin:0">Every workout you log, fading out a day at a time.</p>
-    <div class="hero-fig">${bodyFig(statusLevels(st))}</div>${loadLegend()}${insightLines(bodyInsight(st))}</section>`; })()}
+  <button class="health setup" data-act="tab" data-v="learn"><span><b>Your body · last 7 days</b><br><span class="small muted">${esc((()=>{ const ins=bodyInsight(muscleStatus({noActive:true})); return ins.needs.length?"Needs work: "+mNames(ins.needs.slice(0,3)):ins.rec.length?"Recovering: "+mNames(ins.rec.slice(0,3)):"See what's been worked"; })())}</span></span><span class="go">See →</span></button>
   <section class="tip"><div class="eyebrow">This phase</div><p>${esc(ph.note)}</p></section>`;
 }
 function dayCard(d,ph,can,nid){
@@ -877,22 +875,21 @@ const FEEL=[{k:"easy",n:"Easy",d:"could do 4+ more",rir:"4"},{k:"good",n:"Good",
 
 /* ---------- body (learn) ---------- */
 function viewLearn(){
-  const ph=phaseFor(currentWeek()), plan=plannedVolume(ph.sets), act=actualVolume();
-  const lv={}; Object.keys(MUSCLES).forEach(k=>{ const a=act[k]; lv[k]=a>20?"hot":a<=0?0:Math.min(1,.15+a/10*.85); });
-  const sel=S.selMuscle;
-  let panel=`<div class="mpanel muted small">Tap a muscle to see how much it's been trained and which exercises work it.</div>`;
-  if(sel){
-    const a=act[sel], p=plan[sel], z=zone(a);
-    const exs=Object.entries(EX).filter(([k,e])=>e.m.includes(sel)||e.s.includes(sel));
-    panel=`<div class="mpanel"><div class="spread"><h3>${MUSCLES[sel].n}</h3><span class="zone z-${z.k}">${z.t}</span></div>
-      <div class="meter"><i style="width:${Math.min(100,a/20*100)}%"></i><b style="left:${Math.min(100,p/20*100)}%"></b></div>
-      <div class="small muted"><span class="num">${+a.toFixed(1)}</span> ${a===1?"set":"sets"} in the last 7 days · plan <span class="num">${+p.toFixed(1)}</span></div>
+  const st=muscleStatus(), band=st.band, sel=S.selMuscle;
+  let panel=`<div class="mpanel muted small">Tap a muscle to see how it stands and which exercises work it.</div>`;
+  if(sel&&st.mus[sel]){
+    const m=st.mus[sel], col=m.color||"var(--m-idle)";
+    const exs=Object.entries(EX).filter(([k,e])=>!e.placeholder&&(e.m.includes(sel)||e.s.includes(sel)));
+    const ago=m.last==null?"Not trained in the last 7 days.":m.last<1?"Last trained today.":m.last<2?"Last trained yesterday.":`Last trained ${Math.round(m.last)} days ago.`;
+    panel=`<div class="mpanel"><div class="spread"><h3>${MUSCLES[sel].n}</h3><span class="zone" style="background:${col};color:#fff">${STATUS_TXT[m.k]}</span></div>
+      <div class="meter grad" style="background:linear-gradient(90deg,${loadColor(band.lo*.2,band)},${loadColor(band.lo*.8,band)},${loadColor((band.lo+band.hi)/2,band)},${loadColor(band.hi*1.25,band)},${loadColor(band.hi*2,band)})"><b style="left:${Math.min(100,m.L/(band.hi*2)*100)}%"></b></div>
+      <div class="small muted"><span class="num">${+m.raw.toFixed(1)}</span> ${m.raw===1?"set":"sets"} in the last 7 days. ${ago}${m.recovering?" Still recovering.":""}</div>
       <div class="exlist">${exs.map(([k,e])=>`<button data-act="ex-info" data-ex="${k}">${esc(e.n)}<span>${e.m.includes(sel)?"main":"helper"}</span></button>`).join("")}</div></div>`;
   }
   return `<header class="top"><div class="spread"><div class="eyebrow">Last 7 days</div><button class="pill" data-act="lib">Exercise library</button></div><h1 class="hello">Your body this week</h1>
-    <p class="muted small">The brighter a muscle, the more it's been worked. 10–20 hard sets a week is the sweet spot.</p></header>
-    <div class="figcard big">${bodyFig(lv,{tap:true})}
-      <div class="heatkey"><span><i style="background:var(--m-idle)"></i>Not yet</span><span><i style="background:${fillFor(.3)}"></i>Started</span><span><i style="background:${fillFor(1)}"></i>Sweet spot</span><span><i style="background:var(--hot)"></i>Too much</span></div></div>
+    <p class="muted small">Every set you log, fading out a day at a time. Green is the right amount for your phase (${esc(band.ph.name.toLowerCase())}).</p></header>
+    <div class="figcard big">${bodyFig(statusLevels(st),{tap:true})}${loadLegend()}</div>
+    ${insightLines(bodyInsight(st))}
     ${panel}
     <section class="card"><h3>The basics, in one minute each</h3>${BASICS.map(b=>`<details class="acc"><summary>${esc(b.t)}</summary><p class="small">${esc(b.b)}</p></details>`).join("")}</section>
     <button class="btn block" data-act="lib">Browse all exercises</button>`;
