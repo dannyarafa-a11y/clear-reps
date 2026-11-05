@@ -546,8 +546,8 @@ function viewToday(){
     <div class="hero-top"><div><div class="eyebrow">Next workout · ${esc(dayTag(day))}</div><h2 class="big">${esc(day.name)}</h2></div><div class="mins"><b>${mins}</b><span>min</span></div></div>
     ${(()=>{ const mode=S.homeMap||"week", st=muscleStatus({noActive:true});
       return `<div class="seg" role="tablist"><button role="tab" class="${mode==="week"?"on":""}" data-act="home-map" data-v="week" aria-selected="${mode==="week"}">Last 7 days</button><button role="tab" class="${mode==="plan"?"on":""}" data-act="home-map" data-v="plan" aria-selected="${mode==="plan"}">This workout</button></div>
-      <div class="hero-fig">${mode==="week"?bodyFig(statusLevels(st)):bodyFig(dayLevels({ex:res.ex}))}</div>
-      ${mode==="week"?`${loadLegend()}${insightLines(bodyInsight(st))}`:""}`; })()}
+      <div class="hero-fig">${mode==="week"?bodyFig(statusLevels(st)):bodyFig(intensityLevels(setsPerMuscle(res.ex.map((id,i)=>[id,adjBy[id]??setsFor(day,day.ex[i],ph)]))))}</div>
+      ${mode==="week"?`${loadLegend()}${insightLines(bodyInsight(st))}`:intensityKey()}`; })()}
     <div class="hero-meta"><span>${res.ex.length} exercises</span><span>${day.custom||adj.length?nSets+" sets":ph.sets+" sets each"}</span><span>${esc(ph.name)}</span>${nSwap?`<span>${nSwap} swapped for your gym</span>`:""}${adj.length?`<span class="adj">${adj.length} adjusted for this week</span>`:""}</div>
     ${S.active&&S.paused?"":`<button class="btn primary xl block" data-act="start" data-day="${esc(day.id)}" ${can?"":"disabled"}>Start workout</button>
     <button class="btn block" data-act="free" ${can?"":"disabled"}>Just train (add exercises as you go)</button>`}
@@ -742,7 +742,7 @@ function finishView(day){
   return `<section class="stage center"><div class="eyebrow">Workout complete</div><h1 class="title">Nice work. You showed up.</h1></section>
     <div class="facts"><div><b>${mins}</b><span>minutes</span></div><div><b>${done.length}</b><span>sets</span></div><div><b>${new Set(done.map(s=>s.ex)).size}</b><span>exercises</span></div></div>
     ${(()=>{ const h=sessionHR(w,Date.now()); return h?`<div class="hrline"><span class="heart">♥</span><span>Heart rate <b class="num">avg ${h.avg}</b> <span class="muted">·</span> <b class="num">peak ${h.max}</b> <span class="muted small">bpm</span></span></div>`:`<p class="small muted">Heart rate from your watch appears here after the next sync.</p>`; })()}
-    <div class="figcard">${bodyFig(lv)}<div class="small muted center">What you trained today</div></div>
+    <div class="figcard">${bodyFig(doneLevels(w))}${intensityKey()}<div class="small muted center">What you trained today</div></div>
     ${postBrief(w)}
     <section class="card"><h3>How was it overall?</h3>
       <div class="feel">${[[4,"Easy"],[7,"Just right"],[9,"Brutal"]].map(([v,l])=>`<button class="${w.rpe===v?"on":""}" data-act="rpe" data-v="${v}"><b>${l}</b></button>`).join("")}</div></section>
@@ -1053,12 +1053,8 @@ function viewProgress(){
     const s=(w.sets||[]).filter(x=>x.done), can=S.dbState==="on"&&S.canWrite, saved=S.savedAs.has(w.id);
     const byEx={}; s.forEach(x=>(byEx[x.ex]=byEx[x.ex]||[]).push(x));
     const h=sessionHR(w), hrTxt=h?` · ♥ avg ${h.avg} · peak ${h.max}`:(+w.avgHr>0?` · ♥ ${Math.round(+w.avgHr)} bpm`:"");
-    return `<details class="acc" data-hid="${esc(w.id)}" ${S.openHist===w.id?"open":""}><summary><span><b>${fmtDate(w.date)}</b> · ${esc(histName(w))}<br><span class="small muted">${s.length} sets${w.durationMin?" · "+w.durationMin+" min":""}${hrTxt}</span></span></summary>
-      <div class="hist">${Object.entries(byEx).map(([k,arr])=>`<div class="spread"><span>${esc(EX[k]?.n||k)}</span><span class="num muted">${arr.map(x=>EX[k]?.inc===0?x.r:`${x.w}×${x.r}`).join("  ")}</span></div>`).join("")}
-      ${w.notes?`<p class="muted small">“${esc(w.notes)}”</p>`:""}
-      ${hrDetail(w)}
-      ${s.length&&can?`<div class="row"><button class="pill" data-act="redo" data-id="${esc(w.id)}">↻ Do again</button><button class="pill" data-act="save-as-day" data-id="${esc(w.id)}" ${saved?"disabled":""}>${saved?"Saved ✓":"Save as a workout"}</button></div>`:""}
-      ${S.canWrite?`<div class="row"><button class="pill" data-act="ed-open" data-id="${w.id}">✎ Edit</button><button class="link" data-act="del-workout" data-id="${w.id}">Delete</button></div>`:""}</div></details>`;
+    return `<button class="histrow" data-act="hist-open" data-id="${esc(w.id)}"><span class="histfig">${bodyFig(doneLevels(w),{cls:"mini"})}</span>
+      <span class="tt"><b>${fmtDate(w.date)}</b><span>${esc(histName(w))}</span><small class="muted">${s.length} sets · ${Object.keys(byEx).length} exercises${w.durationMin?" · "+w.durationMin+" min":""}${hrTxt}</small></span><span class="chev">›</span></button>`;
   }).join("");
   return `${notice()}<header class="top"><div class="eyebrow">Consistency beats intensity</div><h1 class="hello">Progress</h1></header>
   <section class="card"><div class="spread"><h3>Last 8 weeks</h3><span class="small muted">workouts / week</span></div>${weekStrip()}</section>
@@ -1234,6 +1230,7 @@ document.addEventListener("click",async ev=>{
   else if(a==="start"){ closeSheet(); startSession(b.dataset.day); }
   else if(a==="free"){ startCustom({dayId:"free",dayName:"Free session",ex:[]}); }
   else if(a==="redo"){ redoWorkout(b.dataset.id); }
+  else if(a==="hist-open"){ workoutDetail(b.dataset.id); }
   else if(a==="save-as-day"){ saveAsDay(b.dataset.id,b); }
   /* photos + library */
   else if(a==="photo-zoom"){ zoomOpen(b.dataset.lib,+b.dataset.i); }
@@ -1420,7 +1417,7 @@ document.addEventListener("click",async ev=>{
   else if(a==="b-cancel"){ dropBuild(); pickDaySheet(); sheetTop(); }
   else if(a==="del-workout"){
     if(b.dataset.confirm!=="1"){ b.dataset.confirm="1"; b.textContent="Tap again to delete"; return; }
-    try{ await Store.del("workouts",b.dataset.id); toast("Deleted"); }catch(e){ toast("Couldn't delete that workout"); }
+    try{ await Store.del("workouts",b.dataset.id); if(S.detailId===b.dataset.id){ S.detailId=null; closeSheet(); } toast("Deleted"); }catch(e){ toast("Couldn't delete that workout"); }
   }
 });
 document.addEventListener("input",ev=>{

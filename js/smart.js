@@ -149,7 +149,7 @@ function preBrief(w,day){
   if(free&&ins.rec.length) items.push(`<li><b>Go easier on:</b> ${esc(mNames(ins.rec.slice(0,3)))}. <span class="muted">Trained in the last day.</span></li>`);
   return `<details class="brief" ${S.briefShut?"":"open"}><summary><span class="eyebrow">Before you start</span><b>Today's plan, explained</b><span class="chev">›</span></summary>
     <ul>${items.join("")}</ul>
-    <div class="brief-map">${bodyFig(statusLevels(st),{cls:"mini"})}<div>${insightLines(ins)}</div></div></details>`;
+    <div class="brief-map">${bodyFig(plannedLevels(w),{cls:"mini"})}<div><p class="small" style="margin:0 0 4px"><b>What today works</b></p><p class="tiny muted" style="margin:0">Darker means more sets. ${free?"Fills in as you add exercises.":""}</p></div></div></details>`;
 }
 /* compare each exercise with last time and say what happens next time, and why */
 function postBrief(w){
@@ -267,3 +267,47 @@ addEventListener("pointerdown",unlockChime,{capture:true,passive:true});
   document.addEventListener("focusout",e=>{ if(/INPUT|TEXTAREA|SELECT/.test(e.target?.tagName||"")) setTimeout(()=>{ if(!/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||"")){ window.scrollTo(window.scrollX,window.scrollY); fix(); } },120); });
   fix();
 })();
+
+/* ---------- workout maps: only the muscles worked, darker = more sets ---------- */
+function setsPerMuscle(pairs){ const c={}; pairs.forEach(([id,n])=>{ const e=EX[id]; if(!e) return; e.m.forEach(m=>c[m]=(c[m]||0)+n); e.s.forEach(m=>c[m]=(c[m]||0)+n/2); }); return c; }
+function intensityLevels(cnt){ const o={}; Object.entries(cnt).forEach(([m,n])=>{ if(n>0) o[m]=Math.min(1,.15+n/6*.85); }); return o; }
+const doneLevels = w => intensityLevels(setsPerMuscle((w.sets||[]).filter(s=>s.done).map(s=>[s.ex,1])));
+const plannedLevels = w => intensityLevels(setsPerMuscle(sessionDay(w).ex.map(id=>[id,(w.sets||[]).filter(s=>s.ex===id).length||1])));
+function intensityKey(){ return `<div class="heatkey"><span><i style="background:${fillFor(.2)}"></i>A little</span><span><i style="background:${fillFor(1)}"></i>A lot · 6+ sets</span></div>`; }
+
+/* ---------- past workout: full view ---------- */
+function workoutDetail(wid){
+  const w=S.workouts.find(x=>x.id===wid); if(!w) return;
+  S.detailId=wid;
+  const done=(w.sets||[]).filter(s=>s.done), ids=[...new Set(done.map(s=>s.ex))];
+  const can=S.dbState==="on"&&S.canWrite, saved=S.savedAs.has(w.id);
+  const start=Date.parse(w.startedAt||""), end=Date.parse(w.finishedAt||"");
+  const mins=w.durationMin||(isFinite(start)&&isFinite(end)?Math.max(1,Math.round((end-start)/6e4)):null);
+  const time=isFinite(start)?new Date(start).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}):"";
+  const vol=done.reduce((a,s)=>a+(+s.w||0)*(+s.r||0)*(EX[s.ex]&&perHand(EX[s.ex])?2:1),0);
+  const cnt=setsPerMuscle(done.map(s=>[s.ex,1]));
+  const musRows=Object.entries(cnt).filter(([,n])=>n>=1).sort((a,b)=>b[1]-a[1]).map(([m,n])=>`<span class="mchip on">${esc(MUSCLES[m]?.n||m)} <b class="num">${Number.isInteger(n)?n:n.toFixed(1)}</b></span>`).join("");
+  const feelTxt={4:"Easy",7:"Just right",9:"Brutal"}[w.rpe];
+  const exCards=ids.map(id=>{
+    const e=EX[id]; if(!e) return "";
+    const ss=done.filter(s=>s.ex===id), bw=e.inc===0, u=e.timed?"s":"";
+    const prev=(()=>{ for(const x of doneWorkouts()){ if(x.id===w.id) continue; if((x.date+(x.finishedAt||""))>=(w.date+(w.finishedAt||""))) continue; const p=(x.sets||[]).filter(s=>s.ex===id&&s.done); if(p.length) return {date:x.date,sets:p}; } return null; })();
+    const top=Math.max(...ss.map(s=>bw?+s.r||0:+s.w||0)), ptop=prev?Math.max(...prev.sets.map(s=>bw?+s.r||0:+s.w||0)):null;
+    const tag=prev==null?["new","★ First time"]:top>ptop?["up",`↑ from ${bw?ptop+u:fmtKg(ptop)+" kg"}`]:top<ptop?["down",`↓ from ${bw?ptop+u:fmtKg(ptop)+" kg"}`]:["same","= same as last time"];
+    const thumb=e.lib&&e.lc!=null?`<img src="${photoSrc(e.lib,1)}" alt="" loading="lazy" onerror="phErr(this)">`:`<span class="swfig">${bodyFig(exLevels(id),{cls:"mini"})}</span>`;
+    return `<div class="wdex"><button class="wdex-h" data-act="ex-info" data-ex="${esc(id)}">${thumb}<span class="tt"><b>${esc(e.n)}</b><small>${esc(e.m.map(m=>MUSCLES[m]?.n).join(", "))}</small></span><span class="pb-t t-${tag[0]}" title="${esc(tag[1])}">${{new:"★",up:"↑",down:"↓",same:"="}[tag[0]]}</span></button>
+      <div class="wdsets">${ss.map((s,i)=>`<span class="wdset"><i class="num">${i+1}</i><b class="num">${bw?"":fmtKg(s.w)+" kg × "}${s.r}${u}</b>${s.feel?`<span class="dotf f-${s.feel}" title="${esc(s.feel)}"></span>`:""}</span>`).join("")}</div>
+      <p class="tiny muted">${esc(tag[1])}${prev?` (${fmtDate(prev.date)})`:""}${!bw&&perHand(e)?" · kg per dumbbell":""}</p></div>`;
+  }).join("");
+  openSheet(`<div class="stack-l wdetail">
+    <div><div class="eyebrow">${esc(fmtDate(w.date))}${time?" · "+esc(time):""}</div><h2>${esc(histName(w))}</h2></div>
+    <div class="facts"><div><b>${mins??"–"}</b><span>minutes</span></div><div><b>${done.length}</b><span>sets</span></div><div><b>${vol?Math.round(vol).toLocaleString():ids.length}</b><span>${vol?"kg lifted":"exercises"}</span></div></div>
+    ${feelTxt?`<p class="small"><b>Felt:</b> ${feelTxt}</p>`:""}
+    <div class="figcard">${bodyFig(doneLevels(w))}${intensityKey()}<div class="mchips">${musRows}</div><p class="tiny muted center">Sets per muscle · helpers count half</p></div>
+    ${hrDetail(w)}
+    <div><h3>Exercises</h3><div class="wdlist">${exCards||`<p class="small muted">No sets logged.</p>`}</div></div>
+    ${w.notes?`<div class="note">“${esc(w.notes)}”</div>`:""}
+    ${done.length&&can?`<div class="row"><button class="btn" data-act="redo" data-id="${esc(w.id)}">↻ Do again</button><button class="btn" data-act="save-as-day" data-id="${esc(w.id)}" ${saved?"disabled":""}>${saved?"Saved ✓":"Save as a workout"}</button></div>`:""}
+    ${S.canWrite?`<div class="row"><button class="pill" data-act="ed-open" data-id="${esc(w.id)}">✎ Edit</button><button class="link" data-act="del-workout" data-id="${esc(w.id)}">Delete</button></div>`:""}
+    <button class="btn ghost block" data-act="close-sheet">Close</button></div>`);
+}

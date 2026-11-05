@@ -454,3 +454,22 @@ html.kb .tabs, html.kb .dock{display:none}
 .sthead .tt{display:flex;flex-direction:column} .sthead b{font-size:17px} .sthead small{color:var(--muted)}
 .stcard .row{display:flex;gap:10px;align-items:center}
 .stcard .tick{flex:1;min-height:46px}
+
+/* history rows + full workout view */
+.histrow{display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:center;width:100%;text-align:left;background:transparent;border:0;border-top:1px solid var(--line);padding:10px 0;font:inherit;color:inherit}
+.histrow:first-of-type{border-top:0}
+.histrow .histfig{width:64px;display:block}
+.histrow .tt{display:flex;flex-direction:column;gap:1px;min-width:0} .histrow small{font-size:12px}
+.histrow .chev,.wdex-h .chev{color:var(--muted);font-size:22px}
+.wdlist{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+.wdex{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.wdex-h{display:grid;grid-template-columns:52px 1fr auto;gap:12px;align-items:center;text-align:left;background:none;border:0;padding:0;font:inherit;color:inherit}
+.wdex-h img{width:52px;height:52px;object-fit:cover;border-radius:10px;background:var(--bg2)}
+.wdex-h .swfig{width:52px;height:52px;display:block;overflow:hidden}
+.wdex-h .tt{display:flex;flex-direction:column} .wdex-h small{color:var(--muted);font-size:12px}
+.wdsets{display:flex;flex-wrap:wrap;gap:6px}
+.wdset{display:inline-flex;align-items:center;gap:6px;background:var(--bg2);border-radius:999px;padding:5px 10px;font-size:13px}
+.wdset i{font-style:normal;color:var(--muted);font-weight:700;font-size:11px}
+.wdex .tiny{margin:0}
+.wdetail h3{margin:0}
+.mchip b{margin-left:4px}
