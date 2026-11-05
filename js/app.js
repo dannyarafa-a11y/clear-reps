@@ -1062,11 +1062,12 @@ function accountCard(){
   if(!cfg) body=`<p class="small muted">Your log is saved on this phone. To back it up and use it on another device, add your Supabase key in <code>js/config.js</code> (see README).</p>`;
   else if(me) body=`<p class="small muted">Signed in as <b>${esc(me)}</b>. Changes sync both ways whenever you're online.</p>
     <div class="row"><button class="pill" data-act="sync-now">↻ Sync now</button><button class="pill quiet" data-act="acct-out">Sign out</button></div>`;
-  else if(a.stage==="sent") body=`<p class="small muted">Check <b>${esc(a.email)}</b>. Tap the link in the email, or type the 6-digit code here.</p>
-    <div class="ceadd"><input id="acct-code" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" maxlength="8" aria-label="Code from the email"><button class="btn" data-act="acct-verify">Sign in</button></div>
-    ${a.err?`<p class="small" style="color:var(--hot)">${esc(a.err)}</p>`:""}<button class="link" data-act="acct-reset" style="padding-left:0">Use a different email</button>`;
-  else body=`<p class="small muted">Sign in once to back up your log and sync it between devices. We'll email you a link and a code.</p>
-    <div class="ceadd"><input id="acct-email" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" value="${esc(a.email)}" aria-label="Email"><button class="btn" data-act="acct-send" ${a.stage==="sending"?"disabled":""}>${a.stage==="sending"?"Sending…":"Send"}</button></div>
+  else if(a.stage==="confirm") body=`<p class="small muted">Almost there. We sent a confirmation email to <b>${esc(a.email)}</b>. Tap the link in it (it's fine if it opens in Safari), then come back here and sign in.</p>
+    <button class="btn" data-act="acct-reset">Back to sign in</button>`;
+  else body=`<p class="small muted">Sign in once to back up your log and sync it between devices.</p>
+    <input id="acct-email" class="field" type="email" inputmode="email" autocomplete="username" placeholder="you@example.com" value="${esc(a.email)}" aria-label="Email" style="width:100%;margin:6px 0">
+    <input id="acct-pass" class="field" type="password" autocomplete="current-password" placeholder="Password (8+ characters)" aria-label="Password" style="width:100%;margin:6px 0">
+    <div class="row"><button class="btn" data-act="acct-in" ${a.stage==="busy"?"disabled":""}>${a.stage==="busy"?"One moment…":"Sign in"}</button><button class="pill quiet" data-act="acct-up" ${a.stage==="busy"?"disabled":""}>First time? Create account</button></div>
     ${a.err?`<p class="small" style="color:var(--hot)">${esc(a.err)}</p>`:""}`;
   return `<section class="card"><div class="spread"><h3>Backup & sync</h3>${cfg?syncPill():""}</div>${body}
     <div class="row"><button class="pill quiet" data-act="export">Export my data</button><label class="pill quiet" for="import-file" style="cursor:pointer">Import a file<input id="import-file" type="file" accept="application/json" hidden></label></div></section>`;
@@ -1319,15 +1320,15 @@ document.addEventListener("click",async ev=>{
   else if(a==="ed-save"){ saveEdit(b); }
   else if(a==="show-checkin"){ S.showCheckin=true; render(); }
   /* backup & sync */
-  else if(a==="acct-send"){
-    const email=($("#acct-email")?.value||"").trim().toLowerCase(); if(!/^\S+@\S+\.\S+$/.test(email)){ toast("Enter your email"); return; }
-    S.account={email,stage:"sending",err:""}; render();
-    try{ await Store.sendCode(email); S.account.stage="sent"; }catch(e){ S.account.stage="idle"; S.account.err=e?.message||"Couldn't send the email"; }
-    render();
-  }
-  else if(a==="acct-verify"){
-    const code=($("#acct-code")?.value||"").trim(); if(code.replace(/\D/g,"").length<6){ toast("Type the 6-digit code"); return; }
-    b.disabled=true; try{ await Store.verifyCode(S.account.email,code); S.account={email:"",stage:"idle",err:""}; toast("Signed in"); }catch(e){ S.account.err=e?.message||"That code didn't work"; b.disabled=false; }
+  else if(a==="acct-in"||a==="acct-up"){
+    const email=($("#acct-email")?.value||"").trim().toLowerCase(), pass=$("#acct-pass")?.value||"";
+    if(!/^\S+@\S+\.\S+$/.test(email)){ toast("Enter your email"); return; }
+    if(pass.length<8){ toast("Password needs 8+ characters"); return; }
+    S.account={email,stage:"busy",err:""}; render();
+    try{
+      if(a==="acct-in"){ await Store.signInPassword(email,pass); S.account={email:"",stage:"idle",err:""}; toast("Signed in"); }
+      else { const now=await Store.signUpPassword(email,pass); if(now){ S.account={email:"",stage:"idle",err:""}; toast("Account created"); } else S.account={email,stage:"confirm",err:""}; }
+    }catch(e){ const m=e?.message||""; S.account={email,stage:"idle",err:/invalid login/i.test(m)?"Email or password didn't match. First time here? Tap Create account.":/not confirmed/i.test(m)?"Confirm your email first: tap the link we sent, then sign in.":m||"Something went wrong"}; }
     render();
   }
   else if(a==="acct-reset"){ S.account={email:S.account.email,stage:"idle",err:""}; render(); }

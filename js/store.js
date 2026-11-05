@@ -126,6 +126,15 @@ const Store = (() => {
       const { error } = await sb.auth.verifyOtp({ email, token: String(token).replace(/\D/g, ""), type: "email" });
       if (error) throw error;
     },
+    async signInPassword(email, password) {
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+    },
+    async signUpPassword(email, password) {
+      const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: location.href.split("#")[0].split("?")[0] } });
+      if (error) throw error;
+      return !!data.session;
+    },
     async signOut() { try { await sb.auth.signOut(); } catch (e) {} session = null; emit("auth"); },
     syncNow: () => runSync(true),
     async rpc(name, args) { if (!sb || !session) throw Object.assign(new Error("not signed in"), { code: "not_signed_in" }); const { data, error } = await sb.rpc(name, args || {}); if (error) throw error; return data; },
