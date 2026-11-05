@@ -184,11 +184,22 @@ function loadLib(){
   return LIBP;
 }
 /* photos are plain files: img/<library id>/0.webp (start) and 1.webp (finish), cached by the service worker */
-const PHFAIL=new Set();
+/* A photo that fails (weak signal at the gym) retries a few times before hiding, instead of disappearing for the whole session. */
+window.phErr=function(img){ const n=+(img.dataset.r||0); if(n<3){ img.dataset.r=n+1; setTimeout(()=>{ const u=img.src.split("?")[0]; img.src=u+"?r="+(n+1); },1200*(n+1)); return; } const x=img.closest(".xph"); if(x) x.hidden=true; else img.hidden=true; };
+addEventListener("online",()=>document.querySelectorAll(".xph[hidden], img.tickph[hidden], .howthumbs img[hidden]").forEach(el=>{ el.hidden=false; (el.tagName==="IMG"?[el]:el.querySelectorAll("img")).forEach(i=>{ i.dataset.r=0; i.src=i.src.split("?")[0]+"?o="+Date.now(); }); }));
+/* Save the photos for every exercise in his program and log on this phone, so they show at the gym with no signal. */
+async function warmPhotos(){
+  if(!navigator.onLine||!("caches" in window)) return;
+  try{ if(localStorage.getItem("cr_warm")==="v1:"+Object.keys(EX).length) return; }catch(e){}
+  const libs=[...new Set(Object.values(EX).filter(e=>e.lib&&e.lc!=null).map(e=>e.lib))];
+  const c=await caches.open("cr-img-v1");
+  for(const lib of libs){ for(const i of [0,1]){ const u=new URL(photoSrc(lib,i),location.href).href; try{ if(!(await c.match(u))){ const r=await fetch(u); if(r.ok) await c.put(u,r); } }catch(e){ return; } } }
+  try{ localStorage.setItem("cr_warm","v1:"+Object.keys(EX).length); }catch(e){}
+}
 const photoSrc=(lib,i)=>`img/${encodeURIComponent(lib)}/${i}.webp`;
 function photosHTML(lib,c){
-  if(!lib||c==null||c===""||PHFAIL.has(lib)) return "";
-  return `<div class="xph" data-ph="${esc(lib)}">${["Start","Finish"].map((t,i)=>`<figure><button data-act="photo-zoom" data-lib="${esc(lib)}" data-i="${i}" aria-label="${t} position, tap to enlarge"><img src="${photoSrc(lib,i)}" alt="${t} position" loading="lazy" decoding="async" onerror="PHFAIL.add(this.closest('.xph').dataset.ph);this.closest('.xph').hidden=true"></button><figcaption>${t}</figcaption></figure>`).join("")}</div>`;
+  if(!lib||c==null||c==="") return "";
+  return `<div class="xph" data-ph="${esc(lib)}">${["Start","Finish"].map((t,i)=>`<figure><button data-act="photo-zoom" data-lib="${esc(lib)}" data-i="${i}" aria-label="${t} position, tap to enlarge"><img src="${photoSrc(lib,i)}" alt="${t} position" loading="lazy" decoding="async" onerror="phErr(this)"></button><figcaption>${t}</figcaption></figure>`).join("")}</div>`;
 }
 function hydratePhotos(){}
 function zoomOpen(lib,i){
@@ -700,7 +711,7 @@ function coolDownFor(w){
 }
 function stretchView(day){
   const w=S.active, picks=coolDownFor(w), o=w.cool||{};
-  const rows=picks.length?picks.map(p=>`<div class="tickrow"><button class="tick ${o[p.id]?"on":""}" data-act="cool" data-k="${esc(p.id)}"><span class="box"></span><img class="tickph" src="${photoSrc(p.id,1)}" alt="" loading="lazy" onerror="this.hidden=true"><span class="tt"><span>${esc(p.n)}</span><small>${esc(MUSCLES[p.m]?.n||"")}${p.per?" · "+p.per:""}</small></span></button><button class="pill" data-act="hold" data-n="${esc(p.n)}">40s</button></div>`).join("")
+  const rows=picks.length?picks.map(p=>`<div class="tickrow"><button class="tick ${o[p.id]?"on":""}" data-act="cool" data-k="${esc(p.id)}"><span class="box"></span><img class="tickph" src="${photoSrc(p.id,1)}" alt="" loading="lazy" onerror="phErr(this)"><span class="tt"><span>${esc(p.n)}</span><small>${esc(MUSCLES[p.m]?.n||"")}${p.per?" · "+p.per:""}</small></span></button><button class="pill" data-act="hold" data-n="${esc(p.n)}">40s</button></div>`).join("")
     :day.cool.map((t,i)=>`<div class="tickrow"><button class="tick ${o[i]?"on":""}" data-act="cool" data-k="${i}"><span class="box"></span><span>${esc(t)}</span></button><button class="pill" data-act="hold" data-n="${esc(t)}">40s</button></div>`).join("");
   return `<section class="stage"><div class="eyebrow">Last step</div><h1 class="title">Stretch</h1><p class="muted">${picks.length?"Picked for the muscles you trained today.":"A few gentle stretches."} Hold each 30–45 seconds. Gentle, never painful.</p></section>
     <div class="ticks">${rows}</div>
@@ -788,7 +799,7 @@ function liftView(day,idx){
     ${swapNote(w,id)}
     <div id="logwrap">${loggerHTML(day,idx)}</div>
     <details class="howbox" data-how="${esc(id)}" ${open?"open":""}>
-      <summary><div class="howthumbs">${e.lib&&e.lc!=null?`<img src="${photoSrc(e.lib,0)}" alt="" loading="lazy" onerror="this.hidden=true"><img src="${photoSrc(e.lib,1)}" alt="" loading="lazy" onerror="this.hidden=true">`:bodyFig(exLevels(id),{cls:"mini"})}</div>
+      <summary><div class="howthumbs">${e.lib&&e.lc!=null?`<img src="${photoSrc(e.lib,0)}" alt="" loading="lazy" onerror="phErr(this)"><img src="${photoSrc(e.lib,1)}" alt="" loading="lazy" onerror="phErr(this)">`:bodyFig(exLevels(id),{cls:"mini"})}</div>
         <div class="howtxt"><b>How to do it</b><span class="small muted">${esc(e.feel||e.m.map(m=>MUSCLES[m].n).join(", "))}</span></div><span class="chev">›</span></summary>
       <div class="howbody">${figCard(id)}${howTo(id)}</div>
     </details>
@@ -1731,6 +1742,7 @@ render();
 (async()=>{
   try{ await Store.ready(); }catch(e){ S.dbState="off"; render(); return; }
   await Store.seedIfEmpty("data/seed.json");
+  setTimeout(warmPhotos,4000);
   /* settings first, so custom exercises exist before workouts reference them */
   S.settings=await Store.getSettings(); applyCustomEx();
   const takeWorkouts=list=>{

@@ -1,7 +1,7 @@
 /* Clear Reps service worker: the app shell and exercise library are cached on install so the app
    opens with no signal; exercise photos are cached the first time they are seen.
    Bump VERSION whenever you change the app files, so phones pick up the new version. */
-const VERSION = "v2.0.4";
+const VERSION = "v2.0.5";
 const SHELL = "cr-shell-" + VERSION, IMG = "cr-img-v1";
 const BASE = new URL("./", self.location).pathname;
 const SHELL_FILES = [
@@ -27,8 +27,9 @@ self.addEventListener("fetch", e => {
   if (url.pathname.startsWith(BASE + "img/")) {
     // photos: cache first, then network
     e.respondWith(caches.open(IMG).then(async c => {
-      const hit = await c.match(req); if (hit) return hit;
-      try { const res = await fetch(req); if (res.ok) c.put(req, res.clone()); return res; }
+      const key = url.origin + url.pathname;
+      const hit = await c.match(key); if (hit) return hit;
+      try { const res = await fetch(key); if (res.ok) c.put(key, res.clone()); return res; }
       catch (err) { return new Response("", { status: 404 }); }
     }));
     return;
