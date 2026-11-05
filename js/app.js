@@ -525,6 +525,7 @@ function viewToday(){
   <header class="top"><div class="spread"><div class="muted small">${esc(date)}</div><button class="pill quiet" data-act="gym">${GEAR_I}My gym</button></div><h1 class="hello">${n>=3?"Week done. Nice.":n?`${3-n} more this week`:"Let's ease back in"}</h1>
     <div class="week">${weekDots()}</div></header>
   ${resume}
+  ${Store.state.configured&&!Store.session?`<button class="health setup" data-act="go-signin"><span><b>Back up your log</b><br><span class="small muted">Sign in once so nothing is lost and Apple Health shows up.</span></span><span class="go">Sign in →</span></button>`:""}
   ${healthStrip()}
   <section class="hero">
     <div class="hero-top"><div><div class="eyebrow">Next workout · ${esc(dayTag(day))}</div><h2 class="big">${esc(day.name)}</h2></div><div class="mins"><b>${mins}</b><span>min</span></div></div>
@@ -1195,6 +1196,7 @@ document.addEventListener("click",async ev=>{
   const b=ev.target.closest("[data-act]"); if(!b) return;
   if(["INPUT","SELECT","TEXTAREA"].includes(b.tagName)) return;
   const a=b.dataset.act;
+  if(a==="go-signin"){ go(()=>{ S.view="progress"; S.paused=!!S.active; }); setTimeout(()=>{ const e=$("#acct-email"); if(e){ e.scrollIntoView({behavior:"smooth",block:"center"}); } },350); return; }
   if(a==="tab"){ go(()=>{ S.view=b.dataset.v; S.paused=!!S.active; try{localStorage.setItem("cr_view",S.view);}catch(e){} if(S.view!=="coach") S.coachFocus=null; }); }
   else if(a==="start"){ closeSheet(); startSession(b.dataset.day); }
   else if(a==="free"){ startCustom({dayId:"free",dayName:"Free session",ex:[]}); }
