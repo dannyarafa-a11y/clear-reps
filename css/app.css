@@ -479,3 +479,5 @@ html.kb .tabs, html.kb .dock{display:none}
 .meter.grad b{position:absolute;top:-4px;width:4px;height:18px;border-radius:2px;background:var(--ink);transform:translateX(-50%)}
 .meter.grad i{display:none}
 .meter.grad::before{display:none}
+.seg.where{margin:0}
+.seg.where button{padding:6px 14px;min-height:34px}

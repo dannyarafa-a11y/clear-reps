@@ -140,6 +140,84 @@ Object.values(EX).forEach(e=>{ e.needs=e.needs||[]; e.alts=e.alts||[]; });
 /* photos: matching Free Exercise DB entry for each built-in exercise, [library id, photo chunk] */
 const EX_LIB = {legpress:["Leg_Press",6],rdl:["Stiff-Legged_Dumbbell_Deadlift",12],lunge:["Dumbbell_Lunges",3],legcurl:["Seated_Leg_Curl",10],shpress:["Dumbbell_Shoulder_Press",3],lateral:["Side_Lateral_Raise",10],calf:["Standing_Calf_Raises",11],dbbench:["Dumbbell_Bench_Press",3],incline:["Incline_Dumbbell_Press",5],pecfly:["Butterfly",1],pushdown:["Triceps_Pushdown_-_Rope_Attachment",12],curl:["Dumbbell_Bicep_Curl",3],ohext:["Cable_Rope_Overhead_Triceps_Extension",2],hammer:["Hammer_Curls",4],pulldown:["Wide-Grip_Lat_Pulldown",13],cablerow:["Seated_Cable_Rows",9],dbrow:["One-Arm_Dumbbell_Row",7],facepull:["Face_Pull",4],hipthrust:["Barbell_Hip_Thrust",0],backext:["Hyperextensions_Back_Extensions",5],plank:["Plank",8],deadbug:["Dead_Bug",2],gobletsquat:["Goblet_Squat",4],chestpressm:["Leverage_Chest_Press",6],shpressm:["Machine_Shoulder_Military_Press",7],glutebridge:["Butt_Lift_Bridge",1],superman:["Superman",12],pushup:["Pushups",8],benchdip:["Bench_Dips",1],cablecurl:["Standing_Biceps_Cable_Curl",11],reversefly:["Reverse_Flyes",9],dbpullover:["Bent-Arm_Dumbbell_Pullover",1]};
 Object.entries(EX_LIB).forEach(([k,[lib,c]])=>{ if(EX[k]){ EX[k].lib=lib; EX[k].lc=c; } });
+/* ---------- at home: equipment-free versions of the A–C split ----------
+   Bodyweight moves get harder by adding reps, slowing the lowering to 3 seconds, or pausing at the hardest point. */
+Object.assign(EX,{
+ h_squat:{n:"Bodyweight squat",m:["quads"],s:["glutes"],r:[12,20],rest:75,inc:0,eq:"No equipment",tip:"Hold a chair back for balance if needed.",
+  cues:["Feet shoulder-width, toes turned out a little","Sit back and down, chest up, until thighs are about level with the floor","Lower for 3 seconds, stand up normally"],
+  mist:["Heels lifting","Knees caving in"],feel:"Front of the thighs and glutes.",swap:"Split squat",lib:"Bodyweight_Squat",lc:1},
+ h_split:{n:"Split squat",m:["quads","glutes"],s:["hamstrings"],r:[8,12],per:"per leg",rest:75,inc:0,eq:"No equipment",tip:"Back foot on a sofa or chair makes it a Bulgarian split squat, much harder.",
+  cues:["Long step: one foot forward, back heel up","Drop the back knee straight down toward the floor","Push through the front heel to come up; do all reps, then switch"],
+  mist:["Front knee caving in","Leaning far forward"],feel:"Front thigh and glute of the front leg.",swap:"Bodyweight squat",lib:"Split_Squats",lc:11},
+ h_hamwalk:{n:"Bridge walkout",m:["hamstrings"],s:["glutes"],r:[6,10],rest:75,inc:0,eq:"Floor",
+  cues:["Lie on your back in a glute bridge, hips up","Walk your heels out in small steps until legs are nearly straight","Walk back in, hips stay up the whole time"],
+  mist:["Hips dropping as you walk out"],feel:"Back of the thighs.",swap:"Single-leg glute bridge",lib:"Natural_Glute_Ham_Raise",lc:null},
+ h_slbridge:{n:"Single-leg glute bridge",m:["glutes"],s:["hamstrings"],r:[10,15],per:"per leg",rest:60,inc:0,eq:"Floor",
+  cues:["On your back, one knee bent, the other leg straight up or out","Push through the planted heel and lift the hips until the body is straight","Squeeze the glute for a second at the top"],
+  mist:["Arching the lower back instead of using the glute"],feel:"Glute and back of the thigh of the working leg.",swap:"Glute bridge (both legs)",lib:"Single_Leg_Glute_Bridge",lc:10},
+ h_pike:{n:"Pike push-up",m:["shoulders"],s:["triceps"],r:[6,12],rest:90,inc:0,eq:"Floor",tip:"Feet on a sofa makes it harder.",
+  cues:["Start in a push-up, then walk your feet in so your hips are high: an upside-down V","Bend the elbows and lower the top of your head toward the floor between your hands","Push back up; this is the at-home shoulder press"],
+  mist:["Hips dropping so it becomes a normal push-up","Elbows flaring straight out"],feel:"Shoulders and triceps.",swap:"Wall push-up with hands high"},
+ h_ytw:{n:"Prone Y-T raise",m:["shoulders","rear_delts"],s:["upper_back"],r:[10,15],rest:60,inc:0,eq:"Floor",
+  cues:["Lie face down, forehead on a towel, arms overhead in a Y, thumbs up","Lift both arms a few centimetres, hold 2 seconds, lower","Next rep with arms straight out to the sides (T). Alternate Y and T"],
+  mist:["Lifting with the lower back","Shrugging toward the ears"],feel:"Back and sides of the shoulders, between the shoulder blades.",swap:"Reverse snow angel"},
+ h_calf:{n:"Single-leg calf raise",m:["calves"],s:[],r:[10,15],per:"per leg",rest:60,inc:0,eq:"A stair step",tip:"Hold the rail.",
+  cues:["Ball of one foot on the edge of a step, heel hanging off","Lower the heel slowly below the step","Rise as high as you can, pause a second at the top"],
+  mist:["Bouncing at the bottom"],feel:"Calf of the working leg.",swap:"Both legs at once",lib:"Standing_Calf_Raises",lc:11},
+ h_pushup:{n:"Push-up",m:["chest"],s:["shoulders","triceps"],r:[6,15],rest:90,inc:0,eq:"Floor",tip:"Hands on a sofa or table makes it easier.",
+  cues:["Hands a bit wider than shoulders, body in one straight line","Lower your chest toward the floor for 2–3 seconds, elbows about 45° out","Push the floor away until your arms are straight"],
+  mist:["Hips sagging","Elbows flared straight out"],feel:"Chest, front shoulders and triceps.",swap:"Hands on a sofa (easier)",lib:"Pushups",lc:8},
+ h_decline:{n:"Feet-up push-up",m:["chest","shoulders"],s:["triceps"],r:[6,12],rest:90,inc:0,eq:"Feet on a sofa or chair",
+  cues:["Feet up on the sofa, hands on the floor under your shoulders","Lower your upper chest to the floor","Push up; more weight on your hands works the upper chest, like the incline press"],
+  mist:["Hips piking up or sagging"],feel:"Upper chest and front shoulders.",swap:"Normal push-up",lib:"Decline_Push-Up",lc:3},
+ h_widepush:{n:"Wide push-up, slow",m:["chest"],s:["shoulders"],r:[6,12],rest:75,inc:0,eq:"Floor",
+  cues:["Hands well wider than shoulders","Take 3 seconds to lower, pause 1 second just above the floor","Push up and squeeze the chest; this stands in for the fly"],
+  mist:["Shoulders rolling forward at the bottom"],feel:"Chest, stretched at the bottom.",swap:"Normal push-up",lib:"Push-Up_Wide",lc:8},
+ h_chairdip:{n:"Chair dip",m:["triceps"],s:["chest","shoulders"],r:[8,15],rest:75,inc:0,eq:"A sturdy chair or sofa edge",
+  cues:["Hands on the edge behind you, fingers forward, legs out in front","Bend the elbows straight back to about 90°","Press back up; bent knees is easier, straight legs harder"],
+  mist:["Going so deep the shoulders hurt","Elbows flaring out"],feel:"Back of the arms.",swap:"Close-grip push-up",lib:"Bench_Dips",lc:1},
+ h_closepush:{n:"Close-grip push-up",m:["triceps"],s:["chest"],r:[6,12],rest:75,inc:0,eq:"Floor",tip:"Knees down makes it easier.",
+  cues:["Hands under your shoulders or a bit closer","Elbows stay tucked to your sides on the way down","Push up through the palms"],
+  mist:["Elbows drifting out"],feel:"Back of the arms.",swap:"Chair dip",lib:"Push-Ups_-_Close_Triceps_Position",lc:8},
+ h_towelcurl:{n:"Towel curl",m:["biceps"],s:[],r:[8,12],per:"per arm",rest:60,inc:0,eq:"A bath towel",
+  cues:["Stand on the middle of a towel, hold one end in one hand","Curl up while your foot pushes down against you: you set the resistance","Take 3 seconds to curl and 3 to lower, working hard all the way"],
+  mist:["Going easy: push hard enough that 10 reps feel like real work"],feel:"Front of the upper arm.",swap:"Underhand table row"},
+ h_tablecurl:{n:"Underhand table row",m:["biceps","lats"],s:["upper_back"],r:[6,12],rest:75,inc:0,eq:"A sturdy dining table",
+  cues:["Lie under the table, grip the edge palms facing you","Body straight, pull your chest up to the table","Lower slowly; bent knees makes it easier"],
+  mist:["Hips sagging","Using a table that can tip: test it first"],feel:"Biceps and the back.",swap:"Towel curl",lib:"Inverted_Row",lc:5},
+ h_tablerow:{n:"Table row",m:["lats","upper_back"],s:["biceps","rear_delts"],r:[6,12],rest:90,inc:0,eq:"A sturdy dining table",tip:"Test that it can't tip.",
+  cues:["Lie under the table, grip the edge palms facing away, hands shoulder-width","Keep your body straight from heels to head and pull your chest to the edge","Lower for 2–3 seconds; walk your feet in to make it easier"],
+  mist:["Hips sagging","Shrugging the shoulders up"],feel:"Middle and upper back, then biceps.",swap:"Door-frame row",lib:"Inverted_Row",lc:5},
+ h_doorrow:{n:"Door-frame row",m:["upper_back"],s:["biceps","rear_delts"],r:[10,15],per:"per arm",rest:60,inc:0,eq:"An open door frame",
+  cues:["Stand in a doorway, grab the frame at chest height with one hand","Feet close to the frame, lean back with a straight arm","Pull yourself in by squeezing the shoulder blade back; feet further in makes it harder"],
+  mist:["Twisting instead of pulling"],feel:"Between the shoulder blades.",swap:"Table row"},
+ h_snow:{n:"Reverse snow angel",m:["rear_delts","upper_back"],s:["lower_back"],r:[8,12],rest:60,inc:0,eq:"Floor",
+  cues:["Lie face down, arms by your sides, palms down, chest slightly lifted","Sweep the arms out wide and overhead without touching the floor","Sweep back slowly; stands in for the face pull"],
+  mist:["Arching hard through the lower back"],feel:"Back of the shoulders and between the shoulder blades.",swap:"Prone Y-T raise"},
+ h_superman:{n:"Superman",m:["lower_back"],s:["glutes"],r:[8,12],rest:60,inc:0,eq:"Floor",
+  cues:["Lie face down, arms overhead","Lift arms, chest and legs a few centimetres, hold 2 seconds","Lower with control"],
+  mist:["Yanking the head up"],feel:"Lower back and glutes.",swap:"Bird dog",lib:"Superman",lc:12},
+ h_thrust:{n:"Sofa hip thrust",m:["glutes"],s:["hamstrings"],r:[12,20],rest:75,inc:0,eq:"Upper back against a sofa",tip:"One leg makes it much harder.",
+  cues:["Shoulder blades on the sofa edge, feet flat, knees bent","Drive the hips up until the body is flat like a table","Squeeze for 2 seconds at the top, lower slowly"],
+  mist:["Arching the lower back at the top","Pushing through the toes"],feel:"Glutes.",swap:"Single-leg glute bridge",lib:"Butt_Lift_Bridge",lc:1},
+ h_sideplank:{n:"Side plank",m:["abs"],s:["shoulders"],r:[20,40],timed:true,per:"per side",rest:45,inc:0,eq:"Floor",tip:"Knees down makes it easier.",
+  cues:["On your side, elbow under the shoulder","Lift the hips so the body is one straight line","Breathe and hold; switch sides"],
+  mist:["Hips sagging toward the floor"],feel:"Side of the waist.",swap:"Plank",lib:"Side_Bridge",lc:10}
+});
+["h_squat","h_split","h_hamwalk","h_slbridge","h_pike","h_ytw","h_calf","h_pushup","h_decline","h_widepush","h_chairdip","h_closepush","h_towelcurl","h_tablecurl","h_tablerow","h_doorrow","h_snow","h_superman","h_thrust","h_sideplank"].forEach(k=>{ const e=EX[k]; if(e.tip){ e.cues=[...e.cues,e.tip.replace(/\.$/,"")+"."]; } e.needs=[]; e.alts=e.alts||[]; e.home=true; if(e.lc===undefined) e.lc=null; });
+EX.h_hamwalk.lib=null;
+const HOME_DAYS = {
+ A:{name:"Legs + Shoulders",ex:["h_squat","h_split","h_hamwalk","h_slbridge","h_pike","h_ytw","h_calf"]},
+ B:{name:"Chest + Arms",ex:["h_pushup","h_decline","h_widepush","h_chairdip","h_towelcurl","h_closepush","h_tablecurl"],
+  warm:["Arm circles, 10 each way","Wall push-ups × 10","Scapula push-ups × 10 (arms straight, squeeze and spread the shoulder blades)","Shoulder rolls × 10","Wrist circles, 10 each way"]},
+ C:{name:"Back + Glutes + Core",ex:["h_tablerow","h_doorrow","h_snow","h_thrust","h_superman","plank","deadbug","h_sideplank"],
+  warm:["Cat-cow × 8","Arm swings across the chest × 15","Bird dog × 6 each side","Glute bridges × 10","Hip hinge with hands on hips × 10"]}
+};
+const atHome = () => S.settings?.where==="home";
+/* what's available right now: My gym list at the gym, nothing but the body (and bands if ticked) at home */
+const availSet = () => atHome()?new Set(["__home",...(S.settings?.homeEquip||[])]):gymSet();
+const homeDay = d => (atHome()&&d&&!d.custom&&HOME_DAYS[d.id])?{...d,ex:HOME_DAYS[d.id].ex,warm:HOME_DAYS[d.id].warm||d.warm,home:true}:d;
+
 
 /* ---------- exercise library (Free Exercise DB) ---------- */
 const LMUS = {quadriceps:"quads",lats:"lats","middle back":"upper_back",traps:"upper_back","lower back":"lower_back",abdominals:"abs",shoulders:"shoulders",glutes:"glutes",hamstrings:"hamstrings",calves:"calves",chest:"chest",biceps:"biceps",triceps:"triceps"};
@@ -277,12 +355,12 @@ const allEqKeys = () => allEquip().map(x=>x[0]);
 const eqName = k => k==="machine"?"a machine":(EQN[k]||customEquip().find(c=>c.id===k)?.name||"equipment you removed");
 const machineOK = g => MACHINES.some(k=>g.has(k)) || customEquip().some(c=>g.has(c.id));
 const hasNeed = (n,g) => !g || n.split("|").some(k=>k==="machine"?machineOK(g):g.has(k));
-const exOK = (id,g=gymSet()) => { const e=EX[id]; return !e || (e.needs||[]).every(n=>hasNeed(n,g)); };
-const libOK = (x,g=gymSet()) => libNeeds(x.eq).every(n=>hasNeed(n,g));
-const missingGear = (id,g=gymSet()) => (EX[id]?.needs||[]).filter(n=>!hasNeed(n,g)).map(n=>n.split("|").map(k=>eqName(k).toLowerCase()).join(" or "));
+const exOK = (id,g=availSet()) => { const e=EX[id]; return !e || (e.needs||[]).every(n=>hasNeed(n,g)); };
+const libOK = (x,g=availSet()) => libNeeds(x.eq).every(n=>hasNeed(n,g));
+const missingGear = (id,g=availSet()) => (EX[id]?.needs||[]).filter(n=>!hasNeed(n,g)).map(n=>n.split("|").map(k=>eqName(k).toLowerCase()).join(" or "));
 /* swap anything the gym can't do for its first alternative that fits; ex[i] always replaces day.ex[i] */
 function resolveDay(day){
-  const g=gymSet(), ex=[], swaps={}, missing=[];
+  const g=availSet(), ex=[], swaps={}, missing=[];
   (day.ex||[]).forEach(id=>{
     if(exOK(id,g)){ ex.push(id); return; }
     const alt=(EX[id]?.alts||[]).find(a=>EX[a]&&exOK(a,g)&&!ex.includes(a)&&!day.ex.includes(a));
@@ -326,7 +404,7 @@ const allDays = () => [...DAYS,...customDays()];
 /* "free" = a Just train session: no fixed list, the session carries its own exList */
 const FREE_WARM=["Arm circles, 10 each way","Leg swings, 10 each leg","Bodyweight squats × 10","Glute bridges × 10","Cat-cow × 8"];
 const freeDay = () => ({id:"free",name:"Free session",ex:[],custom:true,free:true,sets:{},warm:FREE_WARM,cool:GENERIC_COOL});
-const dayById = id => id==="free"?freeDay():allDays().find(d=>d.id===id);
+const dayById = id => id==="free"?freeDay():homeDay(allDays().find(d=>d.id===id));
 /* "Free session · Chest, Arms" from what was actually done */
 function freeName(w){
   const done=(w.sets||[]).filter(s=>s.done), g=new Set(done.flatMap(s=>EX[s.ex]?exGroups(EX[s.ex]):[]));
@@ -334,9 +412,9 @@ function freeName(w){
   const list=LGROUPS.filter(x=>g.has(x));
   return list.length?"Free session · "+list.join(", "):"Free session";
 }
-const histName = w => w.dayId==="free"?(w.dayName||"Free session"):(dayById(w.dayId)?.name||w.dayName||"Workout");
+const histName = w => (w.dayId==="free"?(w.dayName||"Free session"):(dayById(w.dayId)?.name||w.dayName||"Workout"))+(w.where==="home"?" · at home":"");
 const usingCustom = () => !!S.settings?.useCustom && customDays().some(d=>d.ex.length);
-const planDays = () => usingCustom()?customDays().filter(d=>d.ex.length):DAYS;
+const planDays = () => usingCustom()?customDays().filter(d=>d.ex.length):DAYS.map(homeDay);
 const dayTag = d => d?.custom?"My workout":`Day ${d?.id}`;
 const setsFor = (d,id,ph) => (d.custom&&+d.sets?.[id]>0)?+d.sets[id]:ph.sets;
 const wLabel = w => { if(w.dayId==="free") return w.dayName||"Free session"; const d=dayById(w.dayId); return d?(d.custom?d.name:`Day ${d.id}`):(w.dayName||"Workout"); };
@@ -537,13 +615,13 @@ function viewToday(){
   const date=new Date().toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"long"});
   const resume=S.active&&S.paused?`<button class="resume" data-act="resume"><span><b>Workout in progress</b><br><span class="muted">${esc(wLabel(S.active))} · ${(S.active.sets||[]).filter(s=>s.done).length} sets logged</span></span><span class="go">Resume →</span></button><button class="link center" data-act="cancel-session">Discard workout</button>`:"";
   return `${notice()}
-  <header class="top"><div class="spread"><div class="muted small">${esc(date)}</div><button class="pill quiet" data-act="gym">${GEAR_I}My gym</button></div><h1 class="hello">${n>=3?"Week done. Nice.":n?`${3-n} more this week`:"Let's ease back in"}</h1>
+  <header class="top"><div class="spread"><div class="muted small">${esc(date)}</div><div class="row" style="gap:6px"><div class="seg where" role="group" aria-label="Where are you training?"><button class="${atHome()?"":"on"}" data-act="where" data-v="gym" aria-pressed="${!atHome()}">Gym</button><button class="${atHome()?"on":""}" data-act="where" data-v="home" aria-pressed="${atHome()}">Home</button></div>${atHome()?"":`<button class="pill quiet" data-act="gym" aria-label="My gym">${GEAR_I}</button>`}</div></div><h1 class="hello">${n>=3?"Week done. Nice.":n?`${3-n} more this week`:"Let's ease back in"}</h1>
     <div class="week">${weekDots()}</div></header>
   ${resume}
   ${Store.state.configured&&!Store.session?`<button class="health setup" data-act="go-signin"><span><b>Back up your log</b><br><span class="small muted">Sign in once so nothing is lost and Apple Health shows up.</span></span><span class="go">Sign in →</span></button>`:""}
   ${healthStrip()}
   <section class="hero">
-    <div class="hero-top"><div><div class="eyebrow">Next workout · ${esc(dayTag(day))}</div><h2 class="big">${esc(day.name)}</h2></div><div class="mins"><b>${mins}</b><span>min</span></div></div>
+    <div class="hero-top"><div><div class="eyebrow">Next workout · ${esc(dayTag(day))}${day.home?" · at home":""}</div><h2 class="big">${esc(day.name)}</h2></div><div class="mins"><b>${mins}</b><span>min</span></div></div>
     <div class="hero-fig">${bodyFig(intensityLevels(setsPerMuscle(res.ex.map((id,i)=>[id,adjBy[id]??setsFor(day,day.ex[i],ph)]))))}</div>
     ${intensityKey()}
     <div class="hero-meta"><span>${res.ex.length} exercises</span><span>${day.custom||adj.length?nSets+" sets":ph.sets+" sets each"}</span><span>${esc(ph.name)}</span>${nSwap?`<span>${nSwap} swapped for your gym</span>`:""}${adj.length?`<span class="adj">${adj.length} adjusted for this week</span>`:""}</div>
@@ -1264,6 +1342,7 @@ document.addEventListener("click",async ev=>{
   else if(a==="pick-day"){ pickDaySheet(); }
   else if(a==="ex-info"){ exSheet(b.dataset.ex); }
   else if(a==="home-map"){ S.homeMap=b.dataset.v; render(); }
+  else if(a==="where"){ const v=b.dataset.v; if((S.settings?.where||"gym")===v) return; S.settings={...(S.settings||{}),where:v}; render(); writeSettings(); toast(v==="home"?"At home: no-equipment versions":"At the gym"); }
   else if(a==="swap-open"){ swapSheet(+b.dataset.i); }
   else if(a==="swap-to"){ replaceEx(+b.dataset.i,b.dataset.to); }
   else if(a==="swap-lib"){ S.replaceIdx=+b.dataset.i; libSheet({mode:"pick"}); }
@@ -1686,7 +1765,7 @@ async function startCustom({dayId,dayName,ex,counts}){
   await ensureStart();
   const wk=currentWeek(), ph=phaseFor(wk), list=(ex||[]).filter(id=>EX[id]), sets=[];
   list.forEach(id=>{ const n=Math.max(1,Math.min(8,+counts?.[id]||ph.sets)); sets.push(...plannedSets(id,n)); });
-  S.active={id:uid(),status:"active",dayId,dayName:dayName||"Free session",week:wk,date:todayISO(),startedAt:new Date().toISOString(),exList:list,swaps:{},missing:[],sets,warm:{},cool:{}};
+  S.active={id:uid(),status:"active",where:atHome()?"home":"gym",dayId,dayName:dayName||"Free session",week:wk,date:todayISO(),startedAt:new Date().toISOString(),exList:list,swaps:{},missing:[],sets,warm:{},cool:{}};
   S.step=0; S.exIdx=0; S.hint=""; S.paused=false; S.view="today"; closeSheet(); render(); window.scrollTo(0,0);
   await saveActive();
   requestWake();
@@ -1727,7 +1806,7 @@ async function startSession(dayId){
   if(!day||!day.ex.length){ toast("Add an exercise to this workout first"); return; }
   const res=resolveDay(day), sets=[], adjust=planAdjust(day,res,ph), adjBy=Object.fromEntries(adjust.map(a=>[a.ex,a.to]));
   res.ex.forEach((id,i)=>{ const n=adjBy[id]??setsFor(day,day.ex[i],ph); sets.push(...plannedSets(id,n)); });
-  S.active={id:uid(),status:"active",dayId,dayName:day.name,week:wk,date:todayISO(),startedAt:new Date().toISOString(),exList:res.ex,swaps:res.swaps,missing:res.missing,adjust,sets,warm:{},cool:{}};
+  S.active={id:uid(),status:"active",where:atHome()?"home":"gym",dayId,dayName:day.name,week:wk,date:todayISO(),startedAt:new Date().toISOString(),exList:res.ex,swaps:res.swaps,missing:res.missing,adjust,sets,warm:{},cool:{}};
   S.step=0; S.exIdx=0; S.hint=""; S.paused=false; S.view="today"; render(); window.scrollTo(0,0);
   await saveActive();
   requestWake();

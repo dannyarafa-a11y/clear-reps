@@ -188,11 +188,11 @@ function postBrief(w){
 
 /* ---------- swap ---------- */
 function swapOptions(id){
-  const e=EX[id], g=gymSet(), list=S.active?sessionDay(S.active).ex:[];
+  const e=EX[id], g=availSet(), list=S.active?sessionDay(S.active).ex:[];
   const prim=e.m[0], out=[];
   (e.alts||[]).forEach(a=>{ if(EX[a]&&!list.includes(a)) out.push(a); });
   Object.keys(EX).forEach(k=>{ const x=EX[k]; if(k===id||out.includes(k)||list.includes(k)||x.placeholder) return; if(prim&&x.m.includes(prim)) out.push(k); });
-  return out.sort((a,b)=>(exOK(b,g)-exOK(a,g))||((e.alts||[]).includes(b)-(e.alts||[]).includes(a))).slice(0,6);
+  return out.filter(k=>!atHome()||exOK(k,g)).sort((a,b)=>(exOK(b,g)-exOK(a,g))||((e.alts||[]).includes(b)-(e.alts||[]).includes(a))).slice(0,6);
 }
 function swapSheet(i){
   const w=S.active, day=sessionDay(w), id=day.ex[i], e=EX[id]; if(!e) return;
