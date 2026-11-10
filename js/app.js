@@ -775,35 +775,61 @@ function warmView(day){
     <div class="dock"><button class="btn primary xl block" data-act="step" data-i="1">I'm warm · start lifting</button></div>`;
 }
 /* cool-down: one static stretch per muscle actually trained, from Free Exercise DB (photos included) */
+/* one single-person stretch per muscle, from Free Exercise DB (photos included). [library id, name, per side, muscles it stretches] */
 const STRETCHES={
-  quads:[["Quad_Stretch","Standing quad stretch","each leg"],["Kneeling_Hip_Flexor","Kneeling hip flexor stretch","each side"]],
-  hamstrings:[["Seated_Floor_Hamstring_Stretch","Seated hamstring stretch",""],["Standing_Toe_Touches","Standing toe touch",""]],
-  glutes:[["Seated_Glute","Figure-4 glute stretch","each side"],["Knee_Across_The_Body","Knee across the body","each side"]],
-  calves:[["Calf_Stretch_Hands_Against_Wall","Wall calf stretch","each leg"]],
-  chest:[["Chest_And_Front_Of_Shoulder_Stretch","Doorway chest stretch",""],["Elbows_Back","Elbows back",""]],
-  shoulders:[["Shoulder_Stretch","Cross-body shoulder stretch","each arm"],["Seated_Front_Deltoid","Front shoulder stretch",""]],
-  rear_delts:[["Shoulder_Stretch","Cross-body shoulder stretch","each arm"]],
-  triceps:[["Overhead_Triceps","Overhead triceps stretch","each arm"]],
-  biceps:[["Standing_Biceps_Stretch","Biceps wall stretch","each arm"]],
-  lats:[["Overhead_Lat","Overhead lat stretch","each side"],["Side-Lying_Floor_Stretch","Side-lying lat stretch","each side"]],
-  upper_back:[["Upper_Back_Stretch","Upper back stretch",""],["Childs_Pose","Child's pose",""]],
-  lower_back:[["Childs_Pose","Child's pose",""],["Hug_Knees_To_Chest","Knees to chest",""]],
-  abs:[["Looking_At_Ceiling","Cobra · look at the ceiling",""],["Standing_Lateral_Stretch","Side reach","each side"]]
+  quads:[["On_Your_Side_Quad_Stretch","Side-lying quad stretch","each leg",["quads"]],["Standing_Hip_Flexors","Standing hip flexor stretch","each side",["quads"]],["Kneeling_Hip_Flexor","Kneeling hip flexor stretch","each side",["quads"]]],
+  hamstrings:[["Seated_Floor_Hamstring_Stretch","Seated hamstring stretch","each leg",["hamstrings","calves"]],["Standing_Toe_Touches","Standing toe touch","",["hamstrings","lower_back"]]],
+  glutes:[["Ankle_On_The_Knee","Figure-4 glute stretch","each side",["glutes"]],["Knee_Across_The_Body","Knee across the body","each side",["glutes","lower_back"]]],
+  calves:[["Calf_Stretch_Hands_Against_Wall","Wall calf stretch","each leg",["calves"]]],
+  chest:[["Elbows_Back","Elbows back chest opener","",["chest","shoulders"]],["Chest_And_Front_Of_Shoulder_Stretch","Stick or towel chest opener","",["chest","shoulders"]]],
+  shoulders:[["Shoulder_Stretch","Cross-body shoulder stretch","each arm",["shoulders","rear_delts"]],["Side_Wrist_Pull","Wrist-pull shoulder stretch","each arm",["shoulders","rear_delts"]]],
+  rear_delts:[["Shoulder_Stretch","Cross-body shoulder stretch","each arm",["shoulders","rear_delts"]],["Upper_Back_Stretch","Upper back stretch","",["upper_back","rear_delts"]]],
+  triceps:[["Triceps_Stretch","Overhead triceps stretch","each arm",["triceps","lats"]],["Tricep_Side_Stretch","Cross-body triceps stretch","each arm",["triceps","shoulders"]]],
+  biceps:[["Standing_Biceps_Stretch","Hands-behind biceps stretch","",["biceps","chest","shoulders"]]],
+  lats:[["One_Arm_Against_Wall","Wall lat stretch","each side",["lats","triceps"]],["Side-Lying_Floor_Stretch","Side-lying lat stretch","each side",["lats","abs"]]],
+  upper_back:[["Upper_Back_Stretch","Upper back stretch","",["upper_back","rear_delts"]],["Childs_Pose","Child's pose","",["lower_back","lats","upper_back"]]],
+  lower_back:[["Childs_Pose","Child's pose","",["lower_back","lats","upper_back"]],["Hug_Knees_To_Chest","Knees to chest","",["lower_back","glutes"]],["Cat_Stretch","Cat stretch","",["lower_back","upper_back"]]],
+  abs:[["Standing_Lateral_Stretch","Side reach","each side",["abs","lats"]],["Overhead_Stretch","Overhead reach","",["abs","lats","shoulders"]]]
 };
+/* pick stretches so that every muscle trained today gets stretched: greedy, most-trained first, up to 6 */
 function coolDownFor(w){
   const score={}; (w.sets||[]).filter(s=>s.done).forEach(s=>{ const e=EX[s.ex]; if(!e) return; e.m.forEach(m=>score[m]=(score[m]||0)+1); e.s.forEach(m=>score[m]=(score[m]||0)+.5); });
-  const order=Object.keys(score).filter(m=>STRETCHES[m]).sort((a,b)=>score[b]-score[a]);
-  const out=[], used=new Set();
-  order.forEach(m=>{ const pick=STRETCHES[m].find(s=>!used.has(s[0])); if(pick&&out.length<6){ used.add(pick[0]); out.push({id:pick[0],n:pick[1],per:pick[2],m}); } });
+  const need=new Set(Object.keys(score).filter(m=>STRETCHES[m]&&score[m]>=1)), out=[], used=new Set();
+  const all=[]; Object.entries(STRETCHES).forEach(([m,list])=>list.forEach(x=>{ if(!all.some(a=>a[0]===x[0])) all.push(x); }));
+  while(need.size&&out.length<6){
+    const top=[...need].sort((a,b)=>score[b]-score[a])[0];
+    /* best stretch for the most-trained uncovered muscle, preferring ones that also cover other needed muscles */
+    const cand=STRETCHES[top].filter(x=>!used.has(x[0])), pick=cand.sort((a,b)=>b[3].filter(m=>need.has(m)).length-a[3].filter(m=>need.has(m)).length)[0];
+    if(!pick){ need.delete(top); continue; }
+    used.add(pick[0]); out.push({id:pick[0],n:pick[1],per:pick[2],m:top,mus:pick[3]}); pick[3].forEach(m=>need.delete(m));
+  }
   return out;
+}
+/* trained muscles: grey until a stretch for them is ticked, then green */
+function stretchLevels(w,picks){
+  const o=w.cool||{}, lv={}, score={};
+  (w.sets||[]).filter(s=>s.done).forEach(s=>{ const e=EX[s.ex]; if(!e) return; [...e.m,...e.s].forEach(m=>score[m]=1); });
+  Object.keys(score).forEach(m=>lv[m]="plan");
+  picks.forEach(p=>{ if(o[p.id]) p.mus.forEach(m=>lv[m]={col:"#12A365",rank:9}); });
+  return lv;
+}
+function stretchMap(w,picks){
+  const o=w.cool||{}, trained=new Set(), done=new Set();
+  (w.sets||[]).filter(s=>s.done).forEach(s=>{ const e=EX[s.ex]; if(!e) return; e.m.forEach(m=>{ if(STRETCHES[m]) trained.add(m); }); });
+  picks.forEach(p=>{ if(o[p.id]) p.mus.forEach(m=>done.add(m)); });
+  const n=[...trained].filter(m=>done.has(m)).length;
+  return `<div class="figcard" id="stretchmap">${bodyFig(stretchLevels(w,picks))}
+    <div class="heatkey"><span><i style="background:var(--m-plan)"></i>Trained today</span><span><i style="background:#12A365"></i>Stretched</span></div>
+    <p class="small center" style="margin:4px 0 0"><b class="num">${n} of ${trained.size}</b> main muscles stretched${n>=trained.size&&trained.size?" · all done":""}</p></div>`;
 }
 function stretchView(day){
   const w=S.active, picks=coolDownFor(w), o=w.cool||{};
-  const rows=picks.length?picks.map((p,i)=>`<section class="stcard ${o[p.id]?"on":""}"><div class="sthead"><span class="stn num">${i+1}</span><div class="tt"><b>${esc(p.n)}</b><small>${esc(MUSCLES[p.m]?.n||"")}${p.per?" · "+p.per:""} · hold 30–45s</small></div></div>
+  const rows=picks.length?picks.map((p,i)=>`<section class="stcard ${o[p.id]?"on":""}"><div class="sthead"><span class="stn num">${i+1}</span><div class="tt"><b>${esc(p.n)}</b><small>Stretches ${esc(p.mus.map(m=>MUSCLES[m]?.n).join(", ").toLowerCase())}${p.per?" · "+p.per:""} · hold 30–45s</small></div><span class="stfig">${bodyFig(Object.fromEntries(p.mus.map(m=>[m,1])),{cls:"mini"})}</span></div>
       ${photosHTML(p.id,1)}
       <div class="row"><button class="btn" data-act="hold" data-n="${esc(p.n)}">▶ Hold 40s</button><button class="tick ${o[p.id]?"on":""}" data-act="cool" data-k="${esc(p.id)}"><span class="box"></span><span>${o[p.id]?"Done":"Mark done"}</span></button></div></section>`).join("")
     :day.cool.map((t,i)=>`<div class="tickrow"><button class="tick ${o[i]?"on":""}" data-act="cool" data-k="${i}"><span class="box"></span><span>${esc(t)}</span></button><button class="pill" data-act="hold" data-n="${esc(t)}">40s</button></div>`).join("");
   return `<section class="stage"><div class="eyebrow">Last step</div><h1 class="title">Stretch</h1><p class="muted">${picks.length?"Picked for the muscles you trained today.":"A few gentle stretches."} Hold each 30–45 seconds. Gentle, never painful.</p></section>
+    ${picks.length?stretchMap(w,picks):""}
     ${picks.length?`<div class="stlist">${rows}</div><p class="tiny muted center">Tap a photo to see it bigger</p>`:`<div class="ticks">${rows}</div>`}
     <div class="dock"><button class="btn primary xl block" data-act="step" data-i="3">Finish workout</button></div>`;
 }
@@ -1371,7 +1397,7 @@ document.addEventListener("click",async ev=>{
   else if(a==="s-pair"){ togglePair(+b.dataset.i); }
   else if(a==="s-rm"){ if(b.dataset.confirm!=="1"){ b.dataset.confirm="1"; b.textContent="?"; b.classList.add("warn"); setTimeout(()=>{ if(b.isConnected){ b.dataset.confirm=""; b.textContent="×"; b.classList.remove("warn"); } },2500); return; } removeEx(+b.dataset.i); }
   else if(a==="setw"){ const s=S.active.sets.find(x=>x.k===b.dataset.k); if(s){ s.w=+b.dataset.v; updateLogger(); saveActiveSoon(); } }
-  else if(a==="warm"||a==="cool"){ const o=S.active[a]=S.active[a]||{}; o[b.dataset.k]=!o[b.dataset.k]; b.classList.toggle("on",!!o[b.dataset.k]); const sc=b.closest(".stcard"); if(sc){ sc.classList.toggle("on",!!o[b.dataset.k]); const l=b.querySelector("span:last-child"); if(l) l.textContent=o[b.dataset.k]?"Done":"Mark done"; } saveActiveSoon(); }
+  else if(a==="warm"||a==="cool"){ const o=S.active[a]=S.active[a]||{}; o[b.dataset.k]=!o[b.dataset.k]; b.classList.toggle("on",!!o[b.dataset.k]); const sc=b.closest(".stcard"); if(sc){ const sm=$("#stretchmap"); if(sm) sm.outerHTML=stretchMap(S.active,coolDownFor(S.active)); sc.classList.toggle("on",!!o[b.dataset.k]); const l=b.querySelector("span:last-child"); if(l) l.textContent=o[b.dataset.k]?"Done":"Mark done"; } saveActiveSoon(); }
   else if(a==="hold"){ startRest(40,"Hold · "+(b.dataset.n||"stretch"),"Breathe slowly, both sides"); }
   else if(a==="rpe"){ S.active.rpe=+b.dataset.v; document.querySelectorAll('[data-act="rpe"]').forEach(x=>x.classList.toggle("on",x===b)); saveActiveSoon(); }
   else if(a==="wstep"){
