@@ -1,7 +1,7 @@
 /* Clear Reps service worker: the app shell and exercise library are cached on install so the app
    opens with no signal; exercise photos are cached the first time they are seen.
    Bump VERSION whenever you change the app files, so phones pick up the new version. */
-const VERSION = "v2.4.0";
+const VERSION = "v2.5.0";
 const SHELL = "cr-shell-" + VERSION, IMG = "cr-img-v1";
 const BASE = new URL("./", self.location).pathname;
 const SHELL_FILES = [

@@ -333,7 +333,7 @@ const S = {
 /* cloud features (sync, Apple Health, coach) need Supabase configured in js/config.js and a signed-in user */
 const cloudOK = () => !!(Store.state.configured && Store.session);
 try{ S.view = localStorage.getItem("cr_view") || "today"; }catch(e){}
-if(!["today","learn","progress","coach"].includes(S.view)) S.view="today";
+if(!["today","learn","progress"].includes(S.view)) S.view="today";
 
 function phaseFor(week){
   if(week<=2) return {key:"ease",name:"Ease back in",sets:2,rir:"3–4",note:"Leave 3–4 reps in the tank. You're rebuilding the habit and the joints, not testing yourself."};
@@ -555,7 +555,7 @@ const GEAR_I='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-
 const inSession = () => !!(S.active && S.view==="today" && !S.paused);
 function renderTabs(){
   const t=$("#tabs"); t.hidden=inSession();
-  t.innerHTML=`<div class="tabs-in">${[["today","Train"],["learn","Body"],["progress","Progress"],["coach","Coach"]]
+  t.innerHTML=`<div class="tabs-in">${[["today","Train"],["learn","Body"],["progress","Progress"]]
     .map(([k,l])=>`<button class="tab" data-act="tab" data-v="${k}" ${S.view===k?'aria-current="page"':""}>${ICONS[k]}<span>${l}</span></button>`).join("")}</div>`;
 }
 function render(){
@@ -592,7 +592,7 @@ function howTo(id){
     <ol class="cues">${e.cues.slice(0,3).map(c=>`<li>${esc(c)}</li>`).join("")}</ol>
     <div class="avoid"><span>Avoid</span>${esc(e.mist[0])}</div>
     <div class="feelit"><span>You should feel it</span>${esc(e.feel)}</div>
-    <div class="links"><a class="pill" href="${youtube(id)}" target="_blank" rel="noopener">▶ Watch demo</a><button class="pill" data-act="ask-ex" data-ex="${id}">✦ Ask coach</button>${S.active&&sessionDay(S.active).ex.includes(id)?"":`<span class="pill quiet">Alternative: ${esc(e.swap)}</span>`}</div></div>`;
+    <div class="links"><a class="pill" href="${youtube(id)}" target="_blank" rel="noopener">▶ Watch demo</a>${S.active&&sessionDay(S.active).ex.includes(id)?"":`<span class="pill quiet">Alternative: ${esc(e.swap)}</span>`}</div></div>`;
 }
 
 /* ---------- home ---------- */
@@ -610,7 +610,8 @@ function viewToday(){
   const wk=currentWeek(), ph=phaseFor(wk), day=nextDay(), res=resolveDay(day);
   const n=doneWorkouts().filter(w=>{const d=daysBetween(w.date,todayISO());return d>=0&&d<7;}).length;
   const adj=planAdjust(day,res,ph), adjBy=Object.fromEntries(adj.map(a=>[a.ex,a.to]));
-  const nSets=res.ex.reduce((a,id,i)=>a+(adjBy[id]??setsFor(day,day.ex[i],ph)),0), nSwap=Object.keys(res.swaps).length;
+  const lrnH=learnAdjust(res.ex,Object.fromEntries(res.ex.map((id,i)=>[id,adjBy[id]??setsFor(day,day.ex[i],ph)])));
+  const nSets=res.ex.reduce((a,id)=>a+lrnH.sets[id],0), nSwap=Object.keys(res.swaps).length;
   const mins=Math.round(10+nSets*2.6+6);
   const can=S.dbState==="on"&&S.canWrite;
   const date=new Date().toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"long"});
@@ -626,7 +627,7 @@ function viewToday(){
     <div class="hero-top"><div><div class="eyebrow">Next workout · ${esc(dayTag(day))}${day.home?" · at home":""}</div><h2 class="big">${esc(day.name)}</h2></div><div class="mins"><b>${mins}</b><span>min</span></div></div>
     <div class="hero-fig">${bodyFig(intensityLevels(setsPerMuscle(res.ex.map((id,i)=>[id,adjBy[id]??setsFor(day,day.ex[i],ph)]))))}</div>
     ${intensityKey()}
-    <div class="hero-meta"><span>${res.ex.length} exercises</span><span>${day.custom||adj.length?nSets+" sets":ph.sets+" sets each"}</span><span>${esc(ph.name)}</span>${nSwap?`<span>${nSwap} swapped for your gym</span>`:""}${adj.length?`<span class="adj">${adj.length} adjusted for this week</span>`:""}</div>
+    <div class="hero-meta"><span>${res.ex.length} exercises</span><span>${day.custom||adj.length?nSets+" sets":ph.sets+" sets each"}</span><span>${esc(ph.name)}</span>${nSwap?`<span>${nSwap} swapped for your gym</span>`:""}${lrnH.notes.length?`<span class="adj">${lrnH.notes.some(n=>n.k==="return")?"Easing back in":"Tuned to your log"}</span>`:""}${adj.length?`<span class="adj">${adj.length} adjusted for this week</span>`:""}</div>
     ${S.active&&S.paused?"":`<button class="btn primary xl block" data-act="start" data-day="${esc(day.id)}" ${can?"":"disabled"}>Start workout</button>`}
     <button class="link" data-act="pick-day">See the exercises or pick another day</button>
   </section>
@@ -1148,6 +1149,7 @@ function viewProgress(){
     :`<button class="btn block" data-act="show-checkin">+ New check-in</button>`}
     ${photos.length?`<div class="photos">${photos.map(c=>{ const u=S.photoUrls[c.photoId]; return `<figure><img alt="Progress photo ${fmtDate(c.date)}" data-photo="${esc(c.photoId)}" ${u&&u!=="pending"&&u!=="missing"?`src="${esc(u)}"`:""}><figcaption class="num">${fmtDate(c.date)}</figcaption></figure>`; }).join("")}</div>`:""}
     ${cks.length?`<div class="hist">${cks.slice(0,5).map(c=>`<div class="spread small"><span>${fmtDate(c.date)}</span><span class="num muted">${[c.weight&&c.weight+" kg",c.waist&&"waist "+c.waist,c.arm&&"arm "+c.arm].filter(Boolean).join(" · ")||"photo"}</span></div>`).join("")}</div>`:""}</section>
+  ${learnedCard()}
   ${healthProgress()}
   <section class="card"><h3>History</h3>${hist||`<p class="small muted">Your finished workouts show up here.</p>`}</section>
   ${accountCard()}`;
@@ -1314,6 +1316,10 @@ document.addEventListener("click",async ev=>{
   else if(a==="own-add"){ addToSession("ex",b.dataset.ex); toast("Added "+(EX[b.dataset.ex]?.n||"")); }
   else if(a==="redo"){ redoWorkout(b.dataset.id); }
   else if(a==="hist-open"){ workoutDetail(b.dataset.id); }
+  else if(a==="month-report"){ monthSheet(); }
+  else if(a==="month-pick"){ monthSheet(b.dataset.m); }
+  else if(a==="month-copy"){ monthCopy(); }
+  else if(a==="month-share"){ monthShare(); }
   else if(a==="sore-t"){ const id=b.dataset.id, m=b.dataset.m, w=S.workouts.find(x=>x.id===id); if(!w) return; S.soreDraft=S.soreDraft||{}; const d=S.soreDraft[id]=S.soreDraft[id]||{...(w.sore||{})}; d[m]=((d[m]||0)+1)%3; b.className="mchip sore-"+d[m]; b.textContent=MUSCLES[m].n+(d[m]?" · "+(d[m]===2?"very":"a bit"):""); }
   else if(a==="sore-save"){ saveSore(b.dataset.id,S.soreDraft?.[b.dataset.id]||S.workouts.find(x=>x.id===b.dataset.id)?.sore||{}); }
   else if(a==="sore-none"){ saveSore(b.dataset.id,{}); }
@@ -1776,7 +1782,7 @@ async function startCustom({dayId,dayName,ex,counts,plan}){
   await ensureStart();
   const wk=currentWeek(), ph=phaseFor(wk), list=(ex||[]).filter(id=>EX[id]), sets=[];
   list.forEach(id=>{ const n=Math.max(1,Math.min(8,+counts?.[id]||ph.sets)); sets.push(...plannedSets(id,n)); });
-  S.active={id:uid(),status:"active",where:atHome()?"home":"gym",dayId,dayName:dayName||"My own workout",week:wk,date:todayISO(),startedAt:new Date().toISOString(),exList:list,swaps:{},missing:[],sets,warm:{},cool:{},...(plan?{plan}:{})};
+  S.active={id:uid(),status:"active",where:atHome()?"home":"gym",dayId,dayName:dayName||"My own workout",week:wk,date:todayISO(),startedAt:new Date().toISOString(),exList:list,swaps:{},missing:[],sets,warm:{},cool:{},...(plan?{plan}:{}),learn:(()=>{ const r=returnState(); return r?[{k:"return",t:`<b>Welcome back.</b> ${r.off} days off, so weights start ${r.factor<1?`about ${Math.round((1-r.factor)*100)}% lighter`:"where you left off"}. Do fewer sets than usual today; your joints need a session to catch up.`}]:[]; })()};
   S.step=0; S.exIdx=0; S.hint=""; S.paused=false; S.view="today"; closeSheet(); render(); window.scrollTo(0,0);
   await saveActive();
   requestWake();
@@ -1816,8 +1822,10 @@ async function startSession(dayId){
   const day=dayById(dayId), wk=currentWeek(), ph=phaseFor(wk);
   if(!day||!day.ex.length){ toast("Add an exercise to this workout first"); return; }
   const res=resolveDay(day), sets=[], adjust=planAdjust(day,res,ph), adjBy=Object.fromEntries(adjust.map(a=>[a.ex,a.to]));
-  res.ex.forEach((id,i)=>{ const n=adjBy[id]??setsFor(day,day.ex[i],ph); sets.push(...plannedSets(id,n)); });
-  S.active={id:uid(),status:"active",where:atHome()?"home":"gym",dayId,dayName:day.name,week:wk,date:todayISO(),startedAt:new Date().toISOString(),exList:res.ex,swaps:res.swaps,missing:res.missing,adjust,sets,warm:{},cool:{}};
+  const base=Object.fromEntries(res.ex.map((id,i)=>[id,adjBy[id]??setsFor(day,day.ex[i],ph)])), lrn=learnAdjust(res.ex,base);
+  res.ex.forEach(id=>{ sets.push(...plannedSets(id,lrn.sets[id],lrn.wf[id])); });
+  const learn=lrn.notes;
+  S.active={id:uid(),status:"active",where:atHome()?"home":"gym",dayId,dayName:day.name,week:wk,date:todayISO(),startedAt:new Date().toISOString(),exList:res.ex,swaps:res.swaps,missing:res.missing,adjust,learn,sets,warm:{},cool:{}};
   S.step=0; S.exIdx=0; S.hint=""; S.paused=false; S.view="today"; render(); window.scrollTo(0,0);
   await saveActive();
   requestWake();

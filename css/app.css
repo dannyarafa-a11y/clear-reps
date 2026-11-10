@@ -90,7 +90,7 @@ details.card>summary{font-weight:600;color:var(--muted)}
 
 /* tabs */
 .tabs{position:fixed;left:0;right:0;bottom:calc(12px + env(safe-area-inset-bottom,0px) + var(--vvfix,0px));z-index:20;padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px))}
-.tabs-in{max-width:420px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);background:rgba(255,255,255,.9);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);border:1px solid var(--line);border-radius:999px;padding:6px;box-shadow:0 8px 30px rgba(22,30,50,.12)}
+.tabs-in{max-width:360px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);background:rgba(255,255,255,.9);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);border:1px solid var(--line);border-radius:999px;padding:6px;box-shadow:0 8px 30px rgba(22,30,50,.12)}
 .tab{border:0;background:transparent;border-radius:999px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;font-weight:700;color:var(--muted)}
 .tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .tab[aria-current="page"]{color:var(--accent);background:var(--accent-soft)}
@@ -491,3 +491,6 @@ html.kb .tabs, html.kb .dock{display:none}
 .sorechips .mchip{min-height:40px;padding:8px 14px;font-size:13px;border:0}
 .mchip.sore-1{background:#FFF1D6;color:#9A6400}
 .mchip.sore-2{background:#FDE2E2;color:#C42B30}
+.learned ul{margin:8px 0 12px;padding-left:18px;display:flex;flex-direction:column;gap:8px;font-size:14px}
+.learned h3{margin:0}
+pre.report{white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,Menlo,monospace;font-size:11px;line-height:1.5;background:var(--bg2);border-radius:12px;padding:12px;max-height:50vh;overflow:auto;margin:0}

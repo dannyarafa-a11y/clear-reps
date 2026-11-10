@@ -83,7 +83,7 @@ function loadLegend(){
    Before a planned workout, each exercise's set count is nudged by how its main muscles stand this week. */
 function planAdjust(day,res,ph,st){
   st=st||muscleStatus({noActive:true});
-  const adj=[];
+  const adj=[], ret=returnState(); /* after a break everything looks "under-trained"; don't add sets then */
   res.ex.forEach((id,i)=>{
     const e=EX[id]; if(!e) return;
     const base=setsFor(day,day.ex[i],ph); let n=base, type="", mus=[];
@@ -93,7 +93,7 @@ function planAdjust(day,res,ph,st){
     if(over.length){ n=Math.max(1,base-1); type="over"; mus=over; }
     else if(rec.length&&base>1){ n=base-1; type="rec"; mus=rec; }
     else if(high.length&&base>2){ n=base-1; type="high"; mus=high; }
-    else if(low&&ph.key!=="deload"&&base<4){ n=base+1; type="low"; mus=prim; }
+    else if(low&&ph.key!=="deload"&&base<4&&!ret){ n=base+1; type="low"; mus=prim; }
     if(n!==base) adj.push({ex:id,from:base,to:n,type,mus,why:ADJ_WHY[type](mus)});
   });
   return adj;
@@ -114,7 +114,7 @@ function adjustLines(list){
 }
 /* ---------- prefill from last time ----------
    Each set starts from the matching set last time (set 2 from set 2…), with the level-up applied. */
-function plannedSets(id,n){
+function plannedSets(id,n,wf){
   const e=EX[id], t=targetFor(id), last=lastSetsFor(id,S.active?.id), out=[];
   for(let j=0;j<n;j++){
     const ls=last?.sets[Math.min(j,last.sets.length-1)];
@@ -123,7 +123,7 @@ function plannedSets(id,n){
       if(e.inc>0&&+ls.w>0) w=+ls.w;
       const lr=+ls.r||0; if(lr>0) r=Math.min(Math.max(lr+1,e.r[0]),e.r[1]);
     }
-    if(e.inc===0) w=0;
+    if(e.inc===0) w=0; else w=applyWf(id,w,wf??returnState()?.factor);
     out.push({k:uid(),ex:id,w,r,pw:w,rir:"",done:false});
   }
   return out;
@@ -141,6 +141,7 @@ function preBrief(w,day){
   const items=[];
   if(free) items.push(`<li><b>Your own workout${(w.plan||[]).length?": "+esc(w.plan.join(" + ")):""}.</b> Starts empty. Add each exercise as you get to it. The warm-up matches what you picked.</li>`);
   items.push(`<li><b>${esc(ph.name)}:</b> ${free?"":`${ph.sets} sets each, `}stop with ${esc(ph.rir)} reps left in the tank.</li>`);
+  (w.learn||[]).forEach(n=>items.push(`<li>${n.t}</li>`));
   items.push(...adjustLines(w.adjust));
   const gear=Object.entries(w.swaps||{}).filter(([nw,orig])=>EX[nw]&&EX[orig]&&!(w.userSwaps||{})[nw]);
   if(gear.length) items.push(`<li><b>Swapped for your gym:</b> ${esc(gear.map(([nw,orig])=>`${EX[nw].n} instead of ${EX[orig].n}`).join(", "))}.</li>`);
@@ -417,4 +418,157 @@ async function saveSore(id,sore){
   try{ await Store.put("workouts",id,body); S.workouts=S.workouts.map(x=>x.id===id?upd:x); if(S.soreDraft) delete S.soreDraft[id]; S.soreOpen=false; render(); if(S.detailId===id) workoutDetail(id);
     toast(Object.keys(clean).length?"Saved. Next session goes easier on "+mNames(Object.keys(clean)).toLowerCase():"Saved. All good"); }
   catch(e){ toast("Couldn't save. Try again."); }
+}
+
+/* =====================================================================================
+   LEARNING LAYER: reads your history and adjusts. Everything here is plain rules on your
+   own data (no AI), and every change it makes is explained in the before-you-start brief.
+   ===================================================================================== */
+
+/* time off: days since the last finished workout */
+function daysOff(){ const w=doneWorkouts().find(x=>x.id!==S.active?.id); if(!w) return null; return Math.max(0,daysBetween(w.date,todayISO())); }
+/* sessions finished since coming back from a break of 10+ days (to ease in over 1–2 sessions) */
+function returnState(){
+  const ws=doneWorkouts().filter(x=>x.id!==S.active?.id).slice().reverse(); /* oldest first */
+  const off=daysOff(); if(off===null) return null;
+  if(off>=10) return {off,since:0,factor:off>=21?.85:.9,sessions:off>=21?2:1};
+  /* already back: find the last 10+ day gap and count sessions after it */
+  for(let i=ws.length-1;i>0;i--){ const gap=daysBetween(ws[i-1].date,ws[i].date); if(gap>=10){ const since=ws.length-i; const sessions=gap>=21?2:1; return since<sessions?{off:gap,since,factor:gap>=21?.9:1,sessions}:null; } }
+  return null;
+}
+/* your own effort scale, per exercise: how your Easy / Good / Tough taps trend at a weight */
+function feelTrend(id,n=3){
+  const out=[]; for(const w of doneWorkouts()){ if(w.id===S.active?.id) continue; const ss=(w.sets||[]).filter(s=>s.ex===id&&s.done); if(ss.length) out.push(ss); if(out.length>=n) break; }
+  const all=out.flat(), f=k=>all.filter(s=>s.feel===k).length;
+  return {sessions:out, easy:f("easy"), good:f("good"), tough:f("tough"), n:all.length};
+}
+/* stalled: 3 sessions in a row with the same top weight and no more total reps */
+function stalled(id){
+  const e=EX[id]; if(!e||e.inc===0) return false;
+  const t=feelTrend(id,3).sessions; if(t.length<3) return false;
+  const top=ss=>Math.max(...ss.map(s=>+s.w||0)), reps=ss=>ss.reduce((a,s)=>a+(+s.r||0),0);
+  return t.every(ss=>top(ss)===top(t[0])) && reps(t[0])<=reps(t[2]);
+}
+/* whole-session feel: your last 2–3 "how was it overall" answers */
+function sessionFeelTrend(){
+  const r=doneWorkouts().filter(w=>w.rpe).slice(0,3).map(w=>w.rpe);
+  if(r.length>=2&&r.slice(0,2).every(v=>v>=9)) return "hard";
+  if(r.length>=3&&r.every(v=>v<=4)) return "easy";
+  return null;
+}
+/* soreness pattern: for each exercise, how often the muscles it works were reported sore after */
+function sorePattern(){
+  const by={};
+  doneWorkouts().forEach(w=>{ if(!w.soreAt) return; const sore=w.sore||{}; const ids=[...new Set((w.sets||[]).filter(s=>s.done).map(s=>s.ex))];
+    ids.forEach(id=>{ const e=EX[id]; if(!e) return; const hit=e.m.some(m=>sore[m]>0); (by[id]=by[id]||{n:0,sore:0}); by[id].n++; if(hit) by[id].sore++; }); });
+  return by;
+}
+/* readiness from Apple Health: short sleep or a raised resting heart rate */
+function lowReadiness(){ try{ const r=readiness(); return r&&r.k==="easy"?r:null; }catch(e){ return null; } }
+
+/* the rules, applied to a planned session's sets and weights */
+function learnAdjust(ids,baseSets){
+  const notes=[], sets={...baseSets}, wf={}, ph=phaseFor(currentWeek());
+  const ret=returnState();
+  if(ret){ ids.forEach(id=>{ sets[id]=Math.max(1,sets[id]-1); if(ret.factor<1) wf[id]=ret.factor; });
+    notes.push({k:"return",t:`<b>Welcome back.</b> ${ret.since?`Session ${ret.since+1} of ${ret.sessions}`:`${ret.off} days off`}, so one set less on everything${ret.factor<1?` and weights about ${Math.round((1-ret.factor)*100)}% lighter`:""}. Your body keeps most of its strength, this just lets the joints catch up.`}); }
+  const sf=sessionFeelTrend();
+  if(!ret&&sf==="hard"){ const tail=ids.slice(-2); tail.forEach(id=>sets[id]=Math.max(1,sets[id]-1)); notes.push({k:"hard",t:`<b>Last two sessions felt brutal.</b> One set less on the last two exercises today.`}); }
+  if(!ret&&sf==="easy"&&ph.key!=="deload"){ ids.slice(0,2).forEach(id=>sets[id]=Math.min(5,sets[id]+1)); notes.push({k:"easy",t:`<b>Your last three sessions felt easy.</b> One extra set on the first two exercises.`}); }
+  const rd=lowReadiness();
+  if(rd&&!ret){ const tail=ids.slice(-2); tail.forEach(id=>sets[id]=Math.max(1,sets[id]-1)); notes.push({k:"ready",t:`<b>Recovery looks low</b>${rd.sleep!=null&&rd.sleep<6?` (${(+rd.sleep).toFixed(1)} h sleep)`:""}${rd.delta!=null&&rd.delta>=5?` (resting heart rate +${Math.round(rd.delta)})`:""}. One set less on the last two exercises; stop sets at Good.`}); }
+  ids.forEach(id=>{ const e=EX[id]; if(!e||e.inc===0) return; const ft=feelTrend(id,2);
+    if(ft.n>=4&&ft.tough/ft.n>=.5&&!ret){ wf[id]=Math.min(wf[id]||1,.92); notes.push({k:"tough",id,t:`<b>${esc(e.n)}:</b> most sets felt tough the last two times, so about 8% lighter today to rebuild reps.`}); }
+    else if(stalled(id)&&!ret){ wf[id]=Math.min(wf[id]||1,.9); notes.push({k:"stall",id,t:`<b>${esc(e.n)} has stalled</b> for three sessions. Dropping about 10% and building back up usually breaks it. If it stalls again, try a swap.`}); }
+  });
+  return {sets,wf,notes};
+}
+/* lighten by a factor, always at least one weight step, never below one step */
+const applyWf=(id,w,f)=>{ if(!(f<1)||!(+w>0)) return w; const st=wStep(id); return +Math.max(st,Math.min(Math.round(+w*f/st)*st,+w-st)).toFixed(2); };
+
+/* what the app has learned, in plain words, for the Progress tab */
+function learnedCard(){
+  const ws=doneWorkouts(); if(ws.length<1) return "";
+  const rows=[];
+  const off=daysOff(), ret=returnState();
+  if(ret) rows.push(`<li><b>Easing back in</b> after ${ret.off} days off: one set less${ret.factor<1?" and lighter weights":""} for ${ret.sessions===2?"two sessions":"one session"}.</li>`);
+  else if(off!==null) rows.push(`<li><b>Last workout ${off===0?"today":off===1?"yesterday":off+" days ago"}.</b> Breaks of 10+ days trigger an easier first session back.</li>`);
+  const sf=sessionFeelTrend(); if(sf) rows.push(`<li><b>Session feel:</b> recent workouts felt ${sf==="hard"?"brutal, so the next one is trimmed":"easy, so the next one adds a little"}.</li>`);
+  const ids=[...new Set(ws.slice(0,8).flatMap(w=>(w.sets||[]).filter(s=>s.done).map(s=>s.ex)))].filter(id=>EX[id]);
+  const tough0=new Set(ids.filter(id=>{ const f=feelTrend(id,2); return f.n>=4&&f.tough/f.n>=.5; }));
+  const st=ids.filter(id=>stalled(id)&&!tough0.has(id)); if(st.length) rows.push(`<li><b>Stalled:</b> ${esc(st.map(id=>EX[id].n).join(", "))}. Next time drops ~10% to rebuild.</li>`);
+  const tough=ids.filter(id=>{ const f=feelTrend(id,2); return f.n>=4&&f.tough/f.n>=.5; }); if(tough.length) rows.push(`<li><b>Feels hard for you:</b> ${esc(tough.map(id=>EX[id].n).join(", "))}. Weight eases off until it feels Good again.</li>`);
+  const easy=ids.filter(id=>{ const f=feelTrend(id,2); return f.n>=4&&f.easy/f.n>=.6; }); if(easy.length) rows.push(`<li><b>Feels easy for you:</b> ${esc(easy.map(id=>EX[id].n).join(", "))}. Weight goes up faster here.</li>`);
+  const sp=sorePattern(), soreEx=Object.entries(sp).filter(([id,v])=>v.n>=2&&v.sore/v.n>=.5&&EX[id]).map(([id])=>EX[id].n);
+  if(soreEx.length) rows.push(`<li><b>Often leaves you sore:</b> ${esc(soreEx.slice(0,4).join(", "))}. Normal for newer moves; it usually fades in 2–3 weeks.</li>`);
+  const rd=lowReadiness(); if(rd) rows.push(`<li><b>Today's recovery looks low</b> from Apple Health: the plan trims the last two exercises.</li>`);
+  if(!rows.length) rows.push(`<li>Nothing unusual yet. Log a few more sessions, tap Easy / Good / Tough honestly, and use the soreness check-in. Patterns show up after about two weeks.</li>`);
+  return `<section class="card learned"><div class="eyebrow">Learning from your log</div><h3>What the app has noticed</h3><ul>${rows.join("")}</ul>
+    <button class="btn block" data-act="month-report">Monthly summary for an AI ↗</button></section>`;
+}
+
+/* ---------- monthly summary, written for an AI (Claude, ChatGPT) to analyse ---------- */
+function monthKey(d){ return d.slice(0,7); }
+function monthReport(mk){
+  const all=doneWorkouts().slice().reverse(), ws=all.filter(w=>monthKey(w.date)===mk);
+  const [y,m]=mk.split("-").map(Number), label=new Date(y,m-1,1).toLocaleDateString("en-GB",{month:"long",year:"numeric"});
+  const L=[];
+  L.push(`# Clear Reps · monthly training summary · ${label}`,"");
+  L.push(`I'm Danny. I'm getting back into the gym after time off, train about 3 times a week (often with a personal trainer who picks exercises on the day), and want clarity, steady progress and no injuries. Please analyse this month: what went well, what's lagging or unbalanced, any signs of overdoing it, and 3–5 specific changes for next month (exercises, sets, weights, rest days). Keep it simple and practical.`,"");
+  L.push(`## Program`,`- Split: A Legs + Shoulders · B Chest + Arms · C Back + Glutes + Core, plus "My own" sessions built on the day.`,`- Phases: weeks 1–2 ease in (2 sets, 3–4 reps in reserve), then build (3 sets, 1–2 in reserve), every 5th week lighter.`,`- Current: week ${currentWeek()}, ${phaseFor(currentWeek()).name}.`,`- Weights: dumbbell weights are per dumbbell. Feel per set: Easy (4+ reps left) / Good (2–3 left) / Tough (barely).`,"");
+  if(!ws.length){ L.push("No workouts logged this month."); return L.join("\n"); }
+  /* attendance */
+  const days=ws.map(w=>w.date), gaps=[]; for(let i=1;i<all.length;i++){ const g=daysBetween(all[i-1].date,all[i].date); if(g>=7&&monthKey(all[i].date)===mk) gaps.push(`${g} days before ${all[i].date}`); }
+  const weeks={}; ws.forEach(w=>{ const d=new Date(w.date+"T12:00:00"); const mon=new Date(d); mon.setDate(d.getDate()-((d.getDay()+6)%7)); const k=mon.toISOString().slice(0,10); weeks[k]=(weeks[k]||0)+1; });
+  const totalSets=ws.reduce((a,w)=>a+(w.sets||[]).filter(s=>s.done).length,0), mins=ws.map(w=>w.durationMin).filter(Boolean);
+  L.push(`## Attendance`,`- Workouts: ${ws.length} (${ws.filter(w=>w.where==="home").length} at home). Total sets: ${totalSets}. Average length: ${mins.length?Math.round(mins.reduce((a,b)=>a+b,0)/mins.length)+" min":"n/a"}.`,`- Per week (week starting): ${Object.entries(weeks).map(([k,v])=>`${k}: ${v}`).join(" · ")}`,`- Breaks of a week or more: ${gaps.length?gaps.join("; "):"none"}`,"");
+  /* muscle volume */
+  const cnt={}; ws.forEach(w=>(w.sets||[]).filter(s=>s.done).forEach(s=>{ const e=EX[s.ex]; if(!e) return; e.m.forEach(x=>cnt[x]=(cnt[x]||0)+1); e.s.forEach(x=>cnt[x]=(cnt[x]||0)+.5); }));
+  const nW=Math.max(1,Object.keys(weeks).length);
+  L.push(`## Sets per muscle (helpers count half)`,`| Muscle | Total | Per week |`,`|---|---|---|`,...Object.keys(MUSCLES).map(k=>`| ${MUSCLES[k].n} | ${+(cnt[k]||0).toFixed(1)} | ${+((cnt[k]||0)/nW).toFixed(1)} |`),"");
+  /* exercise progress */
+  const ids=[...new Set(ws.flatMap(w=>(w.sets||[]).filter(s=>s.done).map(s=>s.ex)))].filter(id=>EX[id]);
+  L.push(`## Exercise progress this month`,`| Exercise | Sessions | First (best set) | Last (best set) | Est. 1RM change | Feel E/G/T | Note |`,`|---|---|---|---|---|---|---|`);
+  ids.forEach(id=>{ const e=EX[id], ses=ws.map(w=>(w.sets||[]).filter(s=>s.ex===id&&s.done)).filter(x=>x.length);
+    const best=ss=>ss.reduce((a,s)=>e1rm(+s.w||0,+s.r||0)>e1rm(+a.w||0,+a.r||0)?s:a,ss[0]), fmt=s=>e.inc===0?`${s.r}${e.timed?"s":" reps"}`:`${fmtKg(s.w)} kg × ${s.r}`;
+    const b0=best(ses[0]), b1=best(ses.at(-1)), r0=e1rm(+b0.w||0,+b0.r||0), r1=e1rm(+b1.w||0,+b1.r||0);
+    const fl=ses.flat(), f=k=>fl.filter(s=>s.feel===k).length;
+    L.push(`| ${e.n} | ${ses.length} | ${fmt(b0)} | ${fmt(b1)} | ${r0&&r1?(r1>=r0?"+":"")+Math.round((r1/r0-1)*100)+"%":"n/a"} | ${f("easy")}/${f("good")}/${f("tough")} | ${stalled(id)?"stalled":""} |`); });
+  L.push("");
+  /* sessions log */
+  L.push(`## Session log`);
+  ws.forEach(w=>{ const done=(w.sets||[]).filter(s=>s.done), by={}; done.forEach(s=>{ (by[s.ex]=by[s.ex]||[]).push(s); });
+    const h=(typeof sessionHR==="function")?sessionHR(w):null;
+    L.push(`- **${w.date} · ${histName(w)}**${w.durationMin?` · ${w.durationMin} min`:""}${w.rpe?` · felt ${({4:"easy",7:"just right",9:"brutal"})[w.rpe]}`:""}${h?` · HR avg ${h.avg}, peak ${h.max}`:""}`);
+    Object.entries(by).forEach(([id,ss])=>{ const e=EX[id]; if(!e) return; L.push(`  - ${e.n}: ${ss.map(s=>`${e.inc===0?"":fmtKg(s.w)+"×"}${s.r}${e.timed?"s":""}${s.feel?" ("+s.feel[0].toUpperCase()+")":""}`).join(", ")}`); });
+    if(w.sore&&Object.keys(w.sore).length) L.push(`  - Sore after: ${Object.entries(w.sore).map(([k,l])=>`${MUSCLES[k]?.n||k} (${l===2?"very":"a bit"})`).join(", ")}`);
+    else if(w.soreAt) L.push(`  - Sore after: nothing`);
+    if(w.notes) L.push(`  - Note: ${w.notes}`);
+  });
+  L.push("");
+  /* health */
+  const hd=(S.health?.days||[]).filter(d=>monthKey(d.day)===mk);
+  if(hd.length){ const av=k=>{ const v=hd.map(d=>d[k]).filter(x=>x!=null).map(Number); return v.length?(v.reduce((a,b)=>a+b,0)/v.length):null; };
+    L.push(`## Apple Health (Amazfit watch), month averages`,`- Sleep: ${av("sleep_hours")!=null?av("sleep_hours").toFixed(1)+" h":"n/a"} · Resting HR: ${av("resting_hr")!=null?Math.round(av("resting_hr")):"n/a"} · Steps: ${av("steps")!=null?Math.round(av("steps")).toLocaleString("en-US"):"n/a"}`,""); }
+  /* body check-ins */
+  const ck=(S.checkins||[]).filter(c=>monthKey(c.date)===mk);
+  if(ck.length) L.push(`## Body check-ins`,...ck.map(c=>`- ${c.date}: ${[c.weight&&c.weight+" kg",c.waist&&"waist "+c.waist+" cm",c.arm&&"arm "+c.arm+" cm"].filter(Boolean).join(", ")||"photo only"}`),"");
+  L.push(`_Exported from Clear Reps on ${todayISO()}._`);
+  return L.join("\n");
+}
+function monthSheet(mk){
+  const months=[...new Set(doneWorkouts().map(w=>monthKey(w.date)))].sort().reverse();
+  mk=mk||S.reportMonth||months[0]||todayISO().slice(0,7); S.reportMonth=mk;
+  const txt=monthReport(mk); S.reportText=txt;
+  openSheet(`<div class="stack-l"><div><div class="eyebrow">Monthly summary</div><h2>Send it to an AI</h2><p class="small muted">A plain-text summary of the month with a question at the top. Copy it into Claude or ChatGPT, or share it as a file, and ask for changes for next month.</p></div>
+    ${months.length>1?`<div class="mchips">${months.slice(0,6).map(x=>`<button class="mchip ${x===mk?"on":""}" data-act="month-pick" data-m="${x}">${new Date(x+"-01T12:00:00").toLocaleDateString(undefined,{month:"short",year:"numeric"})}</button>`).join("")}</div>`:""}
+    <div class="row"><button class="btn primary" data-act="month-copy">Copy text</button><button class="btn" data-act="month-share">Share file</button></div>
+    <pre class="report">${esc(txt)}</pre>
+    <button class="btn ghost block" data-act="close-sheet">Close</button></div>`);
+}
+async function monthCopy(){ try{ await navigator.clipboard.writeText(S.reportText||""); toast("Copied. Paste it into Claude or ChatGPT"); }catch(e){ toast("Couldn't copy. Try Share file"); } }
+async function monthShare(){
+  const name=`clear-reps-${S.reportMonth||"month"}.md`, file=new File([S.reportText||""],name,{type:"text/markdown"});
+  try{ if(navigator.canShare&&navigator.canShare({files:[file]})){ await navigator.share({files:[file],title:"Clear Reps monthly summary"}); return; } }catch(e){ if(e?.name==="AbortError") return; }
+  const a=document.createElement("a"); a.href=URL.createObjectURL(file); a.download=name; document.body.appendChild(a); a.click(); a.remove(); toast("Downloaded");
 }
