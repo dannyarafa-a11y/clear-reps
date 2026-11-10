@@ -826,7 +826,8 @@ function stretchView(day){
   const w=S.active, picks=coolDownFor(w), o=w.cool||{};
   const rows=picks.length?picks.map((p,i)=>`<section class="stcard ${o[p.id]?"on":""}"><div class="sthead"><span class="stn num">${i+1}</span><div class="tt"><b>${esc(p.n)}</b><small>Stretches ${esc(p.mus.map(m=>MUSCLES[m]?.n).join(", ").toLowerCase())}${p.per?" · "+p.per:""} · hold 30–45s</small></div><span class="stfig">${bodyFig(Object.fromEntries(p.mus.map(m=>[m,1])),{cls:"mini"})}</span></div>
       ${photosHTML(p.id,1)}
-      <div class="row"><button class="btn" data-act="hold" data-n="${esc(p.n)}">▶ Hold 40s</button><button class="tick ${o[p.id]?"on":""}" data-act="cool" data-k="${esc(p.id)}"><span class="box"></span><span>${o[p.id]?"Done":"Mark done"}</span></button></div></section>`).join("")
+      <a class="pill vid" href="https://www.youtube.com/results?search_query=${encodeURIComponent(p.n+" how to")}" target="_blank" rel="noopener">▶ Watch a video</a>
+      <div class="row"><button class="btn" data-act="hold" data-n="${esc(p.n)}">⏱ Hold 40s</button><button class="tick ${o[p.id]?"on":""}" data-act="cool" data-k="${esc(p.id)}"><span class="box"></span><span>${o[p.id]?"Done":"Mark done"}</span></button></div></section>`).join("")
     :day.cool.map((t,i)=>`<div class="tickrow"><button class="tick ${o[i]?"on":""}" data-act="cool" data-k="${i}"><span class="box"></span><span>${esc(t)}</span></button><button class="pill" data-act="hold" data-n="${esc(t)}">40s</button></div>`).join("");
   return `<section class="stage"><div class="eyebrow">Last step</div><h1 class="title">Stretch</h1><p class="muted">${picks.length?"Picked for the muscles you trained today.":"A few gentle stretches."} Hold each 30–45 seconds. Gentle, never painful.</p></section>
     ${picks.length?stretchMap(w,picks):""}
