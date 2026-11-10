@@ -403,14 +403,15 @@ function customDays(){
 const allDays = () => [...DAYS,...customDays()];
 /* "free" = a Just train session: no fixed list, the session carries its own exList */
 const FREE_WARM=["Arm circles, 10 each way","Leg swings, 10 each leg","Bodyweight squats × 10","Glute bridges × 10","Cat-cow × 8"];
-const freeDay = () => ({id:"free",name:"Free session",ex:[],custom:true,free:true,sets:{},warm:FREE_WARM,cool:GENERIC_COOL});
+const freeDay = () => ({id:"free",name:"My own workout",ex:[],custom:true,free:true,sets:{},warm:FREE_WARM,cool:GENERIC_COOL});
 const dayById = id => id==="free"?freeDay():homeDay(allDays().find(d=>d.id===id));
 /* "Free session · Chest, Arms" from what was actually done */
 function freeName(w){
   const done=(w.sets||[]).filter(s=>s.done), g=new Set(done.flatMap(s=>EX[s.ex]?exGroups(EX[s.ex]):[]));
   if(!g.size&&done.some(s=>EX[s.ex]?.cat==="stretching")) g.add("Stretching");
   const list=LGROUPS.filter(x=>g.has(x));
-  return list.length?"Free session · "+list.join(", "):"Free session";
+  if(!list.length&&(w.plan||[]).length) return "My own · "+w.plan.join(", ");
+  return list.length?"My own · "+list.join(", "):"My own workout";
 }
 const histName = w => (w.dayId==="free"?(w.dayName||"Free session"):(dayById(w.dayId)?.name||w.dayName||"Workout"))+(w.where==="home"?" · at home":"");
 const usingCustom = () => !!S.settings?.useCustom && customDays().some(d=>d.ex.length);
@@ -420,7 +421,7 @@ const setsFor = (d,id,ph) => (d.custom&&+d.sets?.[id]>0)?+d.sets[id]:ph.sets;
 const wLabel = w => { if(w.dayId==="free") return w.dayName||"Free session"; const d=dayById(w.dayId); return d?(d.custom?d.name:`Day ${d.id}`):(w.dayName||"Workout"); };
 /* the day as it's actually being done: uses the swapped list saved on the workout */
 function sessionDay(w){
-  if(w.dayId==="free"){ const ex=(w.exList||[]).filter(id=>EX[id]); return {...freeDay(),name:w.dayName||"Free session",ex,cool:ex.length?warmCoolFor(ex).cool:GENERIC_COOL}; }
+  if(w.dayId==="free"){ const ex=(w.exList||[]).filter(id=>EX[id]); return {...freeDay(),name:w.dayName||"Free session",ex,warm:ownWarm(w.plan),cool:ex.length?warmCoolFor(ex).cool:GENERIC_COOL}; }
   const base=dayById(w.dayId)||{id:w.dayId,name:w.dayName||"Workout",ex:[...new Set((w.sets||[]).map(s=>s.ex))],custom:true,sets:{},warm:GENERIC_WARM,cool:GENERIC_COOL};
   return {...base,ex:(w.exList&&w.exList.length)?w.exList:base.ex};
 }
@@ -625,10 +626,10 @@ function viewToday(){
     <div class="hero-fig">${bodyFig(intensityLevels(setsPerMuscle(res.ex.map((id,i)=>[id,adjBy[id]??setsFor(day,day.ex[i],ph)]))))}</div>
     ${intensityKey()}
     <div class="hero-meta"><span>${res.ex.length} exercises</span><span>${day.custom||adj.length?nSets+" sets":ph.sets+" sets each"}</span><span>${esc(ph.name)}</span>${nSwap?`<span>${nSwap} swapped for your gym</span>`:""}${adj.length?`<span class="adj">${adj.length} adjusted for this week</span>`:""}</div>
-    ${S.active&&S.paused?"":`<button class="btn primary xl block" data-act="start" data-day="${esc(day.id)}" ${can?"":"disabled"}>Start workout</button>
-    <button class="btn block" data-act="free" ${can?"":"disabled"}>Just train (add exercises as you go)</button>`}
-    <button class="link" data-act="pick-day">See exercises, pick another day, or make your own</button>
+    ${S.active&&S.paused?"":`<button class="btn primary xl block" data-act="start" data-day="${esc(day.id)}" ${can?"":"disabled"}>Start workout</button>`}
+    <button class="link" data-act="pick-day">See the exercises or pick another day</button>
   </section>
+  ${S.active&&S.paused?"":ownCard(can)}
   <button class="health setup" data-act="tab" data-v="learn"><span><b>Your body · last 7 days</b><br><span class="small muted">${esc((()=>{ const ins=bodyInsight(muscleStatus({noActive:true})); return ins.needs.length?"Needs work: "+mNames(ins.needs.slice(0,3)):ins.rec.length?"Recovering: "+mNames(ins.rec.slice(0,3)):"See what's been worked"; })())}</span></span><span class="go">See →</span></button>
   <section class="tip"><div class="eyebrow">This phase</div><p>${esc(ph.note)}</p></section>`;
 }
@@ -830,8 +831,10 @@ function finishView(day){
     <div class="dock"><button class="btn primary xl block" data-act="finish">Save workout</button></div>`;
 }
 function emptyLiftView(){
-  return `<section class="stage"><div class="eyebrow">Step 2</div><h1 class="title">Add your first exercise</h1><p class="muted">Pick what your trainer shows you. Add the next one when you get to it.</p></section>
+  const w=S.active, sug=ownSuggest(w);
+  return `<section class="stage"><div class="eyebrow">Step 2${(w.plan||[]).length?" · "+esc(w.plan.join(" + ")):""}</div><h1 class="title">Add your first exercise</h1><p class="muted">Pick what you're about to do. Add the next one when you get to it.</p></section>
     <button class="btn primary xl block" data-act="add-ex">+ Add exercise</button>
+    ${sug.length?`<div><div class="eyebrow" style="margin-bottom:8px">Quick picks for ${esc(w.plan.join(" + "))}</div><div class="swaplist">${sug.map(k=>{ const x=EX[k]; return `<button class="swaprow" data-act="own-add" data-ex="${esc(k)}">${x.lib&&x.lc!=null?`<img src="${photoSrc(x.lib,0)}" alt="" loading="lazy" onerror="phErr(this)">`:`<span class="swfig">${bodyFig(exLevels(k),{cls:"mini"})}</span>`}<span class="tt"><b>${esc(x.n)}</b><small>${esc(x.m.map(m=>MUSCLES[m]?.n).join(", "))}</small></span><span class="chev">+</span></button>`; }).join("")}</div></div>`:""}
     <div class="note">Not sure of the name? Ask your trainer, then search for it. You can also browse by muscle.</div>
     <div class="row center"><button class="link" data-act="step" data-i="0">← Back to warm-up</button><button class="link" data-act="step" data-i="2">Skip to stretching</button></div>`;
 }
@@ -1304,7 +1307,10 @@ document.addEventListener("click",async ev=>{
   if(a==="go-signin"){ go(()=>{ S.view="progress"; S.paused=!!S.active; }); setTimeout(()=>{ const e=$("#acct-email"); if(e){ e.scrollIntoView({behavior:"smooth",block:"center"}); } },350); return; }
   if(a==="tab"){ go(()=>{ S.view=b.dataset.v; S.paused=!!S.active; try{localStorage.setItem("cr_view",S.view);}catch(e){} if(S.view!=="coach") S.coachFocus=null; }); }
   else if(a==="start"){ closeSheet(); startSession(b.dataset.day); }
-  else if(a==="free"){ startCustom({dayId:"free",dayName:"Free session",ex:[]}); }
+  else if(a==="free"){ startCustom({dayId:"free",dayName:"My own workout",ex:[]}); }
+  else if(a==="own-g"){ const g=b.dataset.g, cur=new Set(S.ownGroups||S.settings?.ownGroups||[]); cur.has(g)?cur.delete(g):cur.add(g); S.ownGroups=OWN_GROUPS.map(x=>x[0]).filter(x=>cur.has(x)); render(); }
+  else if(a==="own-start"){ const plan=S.ownGroups||S.settings?.ownGroups||[]; S.settings={...(S.settings||{}),ownGroups:plan}; writeSettings(); startCustom({dayId:"free",dayName:plan.length?"My own · "+plan.join(", "):"My own workout",ex:[],plan}); }
+  else if(a==="own-add"){ addToSession("ex",b.dataset.ex); toast("Added "+(EX[b.dataset.ex]?.n||"")); }
   else if(a==="redo"){ redoWorkout(b.dataset.id); }
   else if(a==="hist-open"){ workoutDetail(b.dataset.id); }
   else if(a==="save-as-day"){ saveAsDay(b.dataset.id,b); }
@@ -1312,7 +1318,7 @@ document.addEventListener("click",async ev=>{
   else if(a==="photo-zoom"){ zoomOpen(b.dataset.lib,+b.dataset.i); }
   else if(a==="zoom-close"){ zoomClose(); }
   else if(a==="lib"){ libSheet({mode:"browse"}); }
-  else if(a==="add-ex"){ if(S.active){ S.replaceIdx=null; libSheet({mode:"pick"}); } }
+  else if(a==="add-ex"){ if(S.active){ S.replaceIdx=null; const pl=S.active.plan||[]; libSheet({mode:"pick",grp:pl.length===1?pl[0]:""}); } }
   else if(a==="lib-grp"&&S.lib){ S.lib.grp=b.dataset.g; S.lib.n=40; libRender(); }
   else if(a==="lib-mine"&&S.lib){ S.lib.mine=!S.lib.mine; S.lib.n=40; libRender(); }
   else if(a==="lib-more"&&S.lib){ S.lib.n+=40; libUpdate(); }
@@ -1707,7 +1713,7 @@ function coachContext(){
   const ae=allEquip(), ce=customEquip();
   const gear=(g?`GYM EQUIPMENT HE HAS: ${ae.filter(([k])=>g.has(k)).map(x=>x[1]).join(", ")||"nothing ticked, bodyweight only"}. NOT AVAILABLE: ${ae.filter(([k])=>!g.has(k)).map(x=>x[1]).join(", ")||"nothing"}.`:"GYM EQUIPMENT: not set, assume a fully equipped gym.")
     +(ce.length?` EQUIPMENT HE ADDED HIMSELF: ${ce.map(c=>c.name).join(", ")}.`:"")
-    +` He often trains with a trainer who changes the exercises each day; "Free session" workouts are those, built as he goes.`;
+    +` He often trains with a trainer who changes the exercises each day; "Free session" / "My own" workouts are those, built as he goes.`;
   const vol=Object.keys(MUSCLES).map(k=>`${MUSCLES[k].n} ${+act[k].toFixed(1)}/${+plan[k].toFixed(1)}`).join(", ");
   const ck=S.checkins.slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,3).map(c=>`${c.date}: ${[c.weight&&c.weight+"kg",c.waist&&"waist "+c.waist+"cm"].filter(Boolean).join(", ")}`).join("; ");
   const hd=S.health.days.slice(0,7).map(d=>`${d.day}: ${[d.sleep_hours!=null&&"sleep "+(+d.sleep_hours).toFixed(1)+"h",d.resting_hr!=null&&"resting HR "+Math.round(d.resting_hr),d.steps!=null&&"steps "+d.steps,d.avg_hr!=null&&"avg HR "+Math.round(d.avg_hr)].filter(Boolean).join(", ")}`).join("\n");
@@ -1759,13 +1765,13 @@ async function ensureStart(){
   try{ await Store.putSettings(S.settings); }catch(e){}
 }
 /* a session that carries its own exercise list: Just train (empty) or Do again (copied) */
-async function startCustom({dayId,dayName,ex,counts}){
+async function startCustom({dayId,dayName,ex,counts,plan}){
   if(!(S.dbState==="on"&&S.canWrite)){ toast("Still loading. One second."); return; }
   if(S.active){ toast("Finish or discard the workout in progress first"); return; }
   await ensureStart();
   const wk=currentWeek(), ph=phaseFor(wk), list=(ex||[]).filter(id=>EX[id]), sets=[];
   list.forEach(id=>{ const n=Math.max(1,Math.min(8,+counts?.[id]||ph.sets)); sets.push(...plannedSets(id,n)); });
-  S.active={id:uid(),status:"active",where:atHome()?"home":"gym",dayId,dayName:dayName||"Free session",week:wk,date:todayISO(),startedAt:new Date().toISOString(),exList:list,swaps:{},missing:[],sets,warm:{},cool:{}};
+  S.active={id:uid(),status:"active",where:atHome()?"home":"gym",dayId,dayName:dayName||"My own workout",week:wk,date:todayISO(),startedAt:new Date().toISOString(),exList:list,swaps:{},missing:[],sets,warm:{},cool:{},...(plan?{plan}:{})};
   S.step=0; S.exIdx=0; S.hint=""; S.paused=false; S.view="today"; closeSheet(); render(); window.scrollTo(0,0);
   await saveActive();
   requestWake();
@@ -1776,13 +1782,13 @@ function redoWorkout(wid){
   const w=S.workouts.find(x=>x.id===wid); if(!w) return;
   const ex=doneOrder(w); if(!ex.length){ toast("Nothing to repeat in that one"); return; }
   const keep=w.dayId&&w.dayId!=="free"&&dayById(w.dayId);
-  startCustom({dayId:keep?w.dayId:"free",dayName:keep?keep.name:"Free session",ex,counts:doneCounts(w,ex)});
+  startCustom({dayId:keep?w.dayId:"free",dayName:keep?keep.name:"My own workout",ex,counts:doneCounts(w,ex)});
 }
 async function saveAsDay(wid,btn){
   const w=S.workouts.find(x=>x.id===wid); if(!w) return;
   const ex=doneOrder(w); if(!ex.length){ toast("Nothing to save in that one"); return; }
   if(!canSave()) return;
-  const groups=w.dayId==="free"?String(w.dayName||"").replace(/^Free session( · )?/,"").split(", ").filter(Boolean).join(" + "):"";
+  const groups=w.dayId==="free"?String(w.dayName||"").replace(/^(Free session|My own workout|My own)( · )?/,"").split(", ").filter(Boolean).join(" + "):"";
   const name=(groups||histName(w)||"My workout").slice(0,40);
   btn.disabled=true;
   const ok=await saveSettings({customDays:[...(S.settings?.customDays||[]),{id:"u_"+uid(),name,ex,sets:doneCounts(w,ex)}]});
@@ -1800,7 +1806,7 @@ async function addEquip(){
   if(ok){ gymSheet(); render(); toast(`Added ${name}`); }
 }
 async function startSession(dayId){
-  if(dayId==="free") return startCustom({dayId:"free",dayName:"Free session",ex:[]});
+  if(dayId==="free") return startCustom({dayId:"free",dayName:"My own workout",ex:[]});
   await ensureStart();
   const day=dayById(dayId), wk=currentWeek(), ph=phaseFor(wk);
   if(!day||!day.ex.length){ toast("Add an exercise to this workout first"); return; }

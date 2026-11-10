@@ -1,7 +1,7 @@
 /* Clear Reps service worker: the app shell and exercise library are cached on install so the app
    opens with no signal; exercise photos are cached the first time they are seen.
    Bump VERSION whenever you change the app files, so phones pick up the new version. */
-const VERSION = "v2.2.0";
+const VERSION = "v2.3.0";
 const SHELL = "cr-shell-" + VERSION, IMG = "cr-img-v1";
 const BASE = new URL("./", self.location).pathname;
 const SHELL_FILES = [
@@ -14,7 +14,7 @@ const SHELL_FILES = [
 ].map(p => BASE + p);
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(SHELL).then(c => c.addAll(SHELL_FILES)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(SHELL).then(c => c.addAll(SHELL_FILES.map(u => new Request(u, { cache: "reload" })))).then(() => self.skipWaiting()));
 });
 self.addEventListener("activate", e => {
   e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== SHELL && k !== IMG).map(k => caches.delete(k)))).then(() => self.clients.claim()));
@@ -38,7 +38,7 @@ self.addEventListener("fetch", e => {
   e.respondWith((async () => {
     const c = await caches.open(SHELL);
     try {
-      const res = await fetch(req);
+      const res = await fetch(req, { cache: "no-cache" }); // skip the browser cache so updates show on the next open
       if (res.ok && (url.pathname.startsWith(BASE))) c.put(req, res.clone());
       return res;
     } catch (err) {

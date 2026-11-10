@@ -139,17 +139,18 @@ function lastTimeLine(id){
 function preBrief(w,day){
   const ph=phaseFor(w.week||currentWeek()), st=muscleStatus({skipId:w.id}), ins=bodyInsight(st), free=w.dayId==="free";
   const items=[];
+  if(free) items.push(`<li><b>Your own workout${(w.plan||[]).length?": "+esc(w.plan.join(" + ")):""}.</b> Starts empty. Add each exercise as you get to it. The warm-up matches what you picked.</li>`);
   items.push(`<li><b>${esc(ph.name)}:</b> ${free?"":`${ph.sets} sets each, `}stop with ${esc(ph.rir)} reps left in the tank.</li>`);
   items.push(...adjustLines(w.adjust));
   const gear=Object.entries(w.swaps||{}).filter(([nw,orig])=>EX[nw]&&EX[orig]&&!(w.userSwaps||{})[nw]);
   if(gear.length) items.push(`<li><b>Swapped for your gym:</b> ${esc(gear.map(([nw,orig])=>`${EX[nw].n} instead of ${EX[orig].n}`).join(", "))}.</li>`);
   const ups=day.ex.filter(id=>targetFor(id).up);
   if(ups.length) items.push(`<li><b>Weight goes up:</b> ${esc(ups.map(id=>`${EX[id].n} (${targetFor(id).short.split(" · ")[0]})`).join(", "))}. <span class="muted">Every set hit the top of the range last time.</span></li>`);
-  if(free&&ins.needs.length) items.push(`<li><b>Good picks today:</b> ${esc(mNames(ins.needs.slice(0,3)))}. <span class="muted">Least work this week. Worth telling your trainer.</span></li>`);
+  if(free&&!(w.plan||[]).length&&ins.needs.length) items.push(`<li><b>Good picks today:</b> ${esc(mNames(ins.needs.slice(0,3)))}. <span class="muted">Least work this week. Worth telling your trainer.</span></li>`);
   if(free&&ins.rec.length) items.push(`<li><b>Go easier on:</b> ${esc(mNames(ins.rec.slice(0,3)))}. <span class="muted">Trained in the last day.</span></li>`);
   return `<details class="brief" ${S.briefShut?"":"open"}><summary><span class="eyebrow">Before you start</span><b>Today's plan, explained</b><span class="chev">›</span></summary>
     <ul>${items.join("")}</ul>
-    <div class="brief-map">${bodyFig(plannedLevels(w),{cls:"mini"})}<div><p class="small" style="margin:0 0 4px"><b>What today works</b></p><p class="tiny muted" style="margin:0">Darker means more sets. ${free?"Fills in as you add exercises.":""}</p></div></div></details>`;
+    <div class="brief-map">${bodyFig(free?ownLevels(w):plannedLevels(w),{cls:"mini"})}<div><p class="small" style="margin:0 0 4px"><b>What today works</b></p><p class="tiny muted" style="margin:0">${free?"Your plan for now. Fills in as you add exercises.":"Darker means more sets."}</p></div></div></details>`;
 }
 /* compare each exercise with last time and say what happens next time, and why */
 function postBrief(w){
@@ -310,4 +311,43 @@ function workoutDetail(wid){
     ${done.length&&can?`<div class="row"><button class="btn" data-act="redo" data-id="${esc(w.id)}">↻ Do again</button><button class="btn" data-act="save-as-day" data-id="${esc(w.id)}" ${saved?"disabled":""}>${saved?"Saved ✓":"Save as a workout"}</button></div>`:""}
     ${S.canWrite?`<div class="row"><button class="pill" data-act="ed-open" data-id="${esc(w.id)}">✎ Edit</button><button class="link" data-act="del-workout" data-id="${esc(w.id)}">Delete</button></div>`:""}
     <button class="btn ghost block" data-act="close-sheet">Close</button></div>`);
+}
+
+/* ---------- My own workout: starts empty; you pick what you plan to train ---------- */
+const OWN_GROUPS = [["Legs",["quads","hamstrings","calves"]],["Glutes",["glutes"]],["Chest",["chest"]],["Back",["lats","upper_back","lower_back"]],["Shoulders",["shoulders","rear_delts"]],["Arms",["biceps","triceps"]],["Core",["abs"]]];
+const OWN_WARM = {
+  Legs:["Bodyweight squats × 10","Leg swings, 10 each leg"],
+  Glutes:["Glute bridges × 10","Hip circles, 5 each way"],
+  Chest:["Wall or incline push-ups × 10","Arm swings across the chest × 15"],
+  Back:["Cat-cow × 8","Band pull-aparts or arm pulls back × 15"],
+  Shoulders:["Arm circles, 10 each way","Shoulder rolls × 10"],
+  Arms:["Wrist and elbow circles, 10 each way","Light curls or arm swings × 15"],
+  Core:["Dead bug × 6 each side","Bird dog × 6 each side"]
+};
+const OWN_BASE = ["Cat-cow × 8","Arm circles, 10 each way","Bodyweight squats × 10"];
+function ownWarm(groups){
+  const g=(groups||[]).filter(x=>OWN_WARM[x]);
+  if(!g.length) return OWN_BASE.concat(["Leg swings, 10 each leg","Glute bridges × 10"]);
+  const out=[]; g.forEach(x=>OWN_WARM[x].forEach(t=>{ if(!out.includes(t)) out.push(t); }));
+  return out.slice(0,6);
+}
+const ownMuscles = groups => (groups||[]).flatMap(g=>(OWN_GROUPS.find(x=>x[0]===g)||[0,[]])[1]);
+function ownLevels(w){
+  const done=(w.sets||[]).some(s=>s.done)||(w.exList||[]).length;
+  if(done) return plannedLevels(w);
+  const o={}; ownMuscles(w.plan).forEach(m=>o[m]=.3); return o;
+}
+/* a few good first picks for the planned groups, from your program and what you've done before */
+function ownSuggest(w,n=6){
+  const mus=new Set(ownMuscles(w.plan)); if(!mus.size) return [];
+  const have=new Set(sessionDay(w).ex), g=availSet(), seen=new Set(doneWorkouts().flatMap(x=>(x.sets||[]).filter(s=>s.done).map(s=>s.ex)));
+  return Object.keys(EX).filter(k=>{ const e=EX[k]; return !e.placeholder&&!have.has(k)&&e.m.some(m=>mus.has(m))&&exOK(k,g)&&(atHome()?e.home||e.inc===0:!e.home); })
+    .sort((a,b)=>(seen.has(b)-seen.has(a))||((EX[b].lib?1:0)-(EX[a].lib?1:0))).slice(0,n);
+}
+function ownCard(can){
+  const sel=new Set(S.ownGroups||S.settings?.ownGroups||[]);
+  return `<section class="card owncard"><div class="eyebrow">Or</div><h3>My own workout</h3>
+    <p class="small muted" style="margin:0">Start empty and add each exercise as you do it. What are you planning to train?</p>
+    <div class="mchips">${OWN_GROUPS.map(([g])=>`<button class="mchip ${sel.has(g)?"on":""}" data-act="own-g" data-g="${g}" aria-pressed="${sel.has(g)}">${g}</button>`).join("")}</div>
+    <button class="btn block ${sel.size?"primary":""}" data-act="own-start" ${can?"":"disabled"}>${sel.size?`Start · ${[...sel].join(" + ")}`:"Start without a plan"}</button></section>`;
 }
