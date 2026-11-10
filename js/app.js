@@ -621,6 +621,7 @@ function viewToday(){
   ${resume}
   ${Store.state.configured&&!Store.session?`<button class="health setup" data-act="go-signin"><span><b>Back up your log</b><br><span class="small muted">Sign in once so nothing is lost and Apple Health shows up.</span></span><span class="go">Sign in →</span></button>`:""}
   ${healthStrip()}
+  ${soreCard()}
   <section class="hero">
     <div class="hero-top"><div><div class="eyebrow">Next workout · ${esc(dayTag(day))}${day.home?" · at home":""}</div><h2 class="big">${esc(day.name)}</h2></div><div class="mins"><b>${mins}</b><span>min</span></div></div>
     <div class="hero-fig">${bodyFig(intensityLevels(setsPerMuscle(res.ex.map((id,i)=>[id,adjBy[id]??setsFor(day,day.ex[i],ph)]))))}</div>
@@ -820,7 +821,7 @@ function finishView(day){
   return `<section class="stage center"><div class="eyebrow">Workout complete</div><h1 class="title">Nice work. You showed up.</h1></section>
     <div class="facts"><div><b>${mins}</b><span>minutes</span></div><div><b>${done.length}</b><span>sets</span></div><div><b>${new Set(done.map(s=>s.ex)).size}</b><span>exercises</span></div></div>
     ${(()=>{ const h=sessionHR(w,Date.now()); return h?`<div class="hrline"><span class="heart">♥</span><span>Heart rate <b class="num">avg ${h.avg}</b> <span class="muted">·</span> <b class="num">peak ${h.max}</b> <span class="muted small">bpm</span></span></div>`:`<p class="small muted">Heart rate from your watch appears here after the next sync.</p>`; })()}
-    <div class="figcard">${bodyFig(doneLevels(w))}${intensityKey()}<div class="small muted center">What you trained today</div></div>
+    <div class="figcard">${bodyFig(sessionGrad(w))}${sessionKey()}${sessionLine(w)}<div class="small muted center">What you trained today</div></div>
     ${postBrief(w)}
     <section class="card"><h3>How was it overall?</h3>
       <div class="feel">${[[4,"Easy"],[7,"Just right"],[9,"Brutal"]].map(([v,l])=>`<button class="${w.rpe===v?"on":""}" data-act="rpe" data-v="${v}"><b>${l}</b></button>`).join("")}</div></section>
@@ -920,7 +921,7 @@ function sessionListSheet(){
       <button class="sname" data-act="goto" data-i="${i}" data-close="1"><span class="sn num">${i+1}</span><span class="exn">${esc(e.n)}${gi>=0?`<em class="swp">⇄ Superset ${gi+1}</em>`:""}</span><span class="num muted small">${d}/${ss.length}</span></button>
       <div class="sctl"><button class="icon sm" data-act="s-move" data-i="${i}" data-d="-1" ${i?"":"disabled"} aria-label="Move up">↑</button><button class="icon sm" data-act="s-move" data-i="${i}" data-d="1" ${i<ex.length-1?"":"disabled"} aria-label="Move down">↓</button><button class="icon sm ${paired?"on":""}" data-act="s-pair" data-i="${i}" ${i<ex.length-1?"":"disabled"} aria-label="${paired?"Unpair from next":"Superset with next"}" title="Superset with the next exercise">⇄</button><button class="icon sm" data-act="s-rm" data-i="${i}" aria-label="Remove ${esc(e.n)}">×</button></div></div>`; }).join("");
   openSheet(`<div class="stack-l"><div><div class="eyebrow">${esc(wLabel(w))}</div><h2>Today's exercises</h2></div>
-    <div class="figcard"><div class="livemap">${bodyFig(sessionLevels(w),{cls:"mini"})}</div><div class="heatkey"><span><i style="background:${fillFor(.6)}"></i>Trained · darker = more sets</span><span><i style="background:var(--m-plan)"></i>Still to do</span></div></div>
+    <div class="figcard"><div class="livemap">${bodyFig(sessionGrad(w,true),{cls:"mini"})}</div>${sessionKey(true)}${sessionLine(w)}</div>
     <div class="slist">${rows||`<p class="small muted">Nothing added yet.</p>`}</div>
     <p class="tiny muted">Tap a name to jump to it. ⇄ pairs it with the next one as a superset: you alternate sets and rest after each round.</p>
     <button class="btn block" data-act="add-ex">+ Add exercise</button>
@@ -1313,6 +1314,9 @@ document.addEventListener("click",async ev=>{
   else if(a==="own-add"){ addToSession("ex",b.dataset.ex); toast("Added "+(EX[b.dataset.ex]?.n||"")); }
   else if(a==="redo"){ redoWorkout(b.dataset.id); }
   else if(a==="hist-open"){ workoutDetail(b.dataset.id); }
+  else if(a==="sore-t"){ const id=b.dataset.id, m=b.dataset.m, w=S.workouts.find(x=>x.id===id); if(!w) return; S.soreDraft=S.soreDraft||{}; const d=S.soreDraft[id]=S.soreDraft[id]||{...(w.sore||{})}; d[m]=((d[m]||0)+1)%3; b.className="mchip sore-"+d[m]; b.textContent=MUSCLES[m].n+(d[m]?" · "+(d[m]===2?"very":"a bit"):""); }
+  else if(a==="sore-save"){ saveSore(b.dataset.id,S.soreDraft?.[b.dataset.id]||S.workouts.find(x=>x.id===b.dataset.id)?.sore||{}); }
+  else if(a==="sore-none"){ saveSore(b.dataset.id,{}); }
   else if(a==="save-as-day"){ saveAsDay(b.dataset.id,b); }
   /* photos + library */
   else if(a==="photo-zoom"){ zoomOpen(b.dataset.lib,+b.dataset.i); }
@@ -1718,6 +1722,7 @@ function coachContext(){
   const ck=S.checkins.slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,3).map(c=>`${c.date}: ${[c.weight&&c.weight+"kg",c.waist&&"waist "+c.waist+"cm"].filter(Boolean).join(", ")}`).join("; ");
   const hd=S.health.days.slice(0,7).map(d=>`${d.day}: ${[d.sleep_hours!=null&&"sleep "+(+d.sleep_hours).toFixed(1)+"h",d.resting_hr!=null&&"resting HR "+Math.round(d.resting_hr),d.steps!=null&&"steps "+d.steps,d.avg_hr!=null&&"avg HR "+Math.round(d.avg_hr)].filter(Boolean).join(", ")}`).join("\n");
   let live=hd?`\nAPPLE HEALTH (from his Amazfit watch via Zepp), last 7 days:\n${hd}`:"";
+  { const so=soreRecent(96); const t=Object.entries(so).map(([m,v])=>`${MUSCLES[m]?.n||m} ${v.l===2?"very":"a bit"} sore`).join(", "); if(t) live+=`\nSORENESS he reported after recent workouts: ${t}.`; }
   if(S.active){ const s=(S.active.sets||[]).filter(x=>x.done); live=`\nCURRENTLY MID-SESSION: ${wLabel(S.active)}, ${s.length} sets logged so far.`; }
   return `TODAY: ${todayISO()}. Program week ${wk}, phase "${ph.name}" (${ph.sets} working sets per exercise, stop at RIR ${ph.rir}).
 ${uc?`PROGRAM (his own workouts, rotated in order; he chose these over the built-in A/B/C plan):`:"PROGRAM (3 days, rotate A>B>C):"}\n${prog}${others}

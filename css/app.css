@@ -485,3 +485,9 @@ html.kb .tabs, html.kb .dock{display:none}
 .owncard h3{margin:0}
 .owncard .mchips{display:flex;flex-wrap:wrap;gap:8px}
 .owncard .mchip{min-height:40px;padding:8px 14px}
+.sorecard{display:flex;flex-direction:column;gap:10px}
+.sorecard h3{margin:0}
+.sorechips{display:flex;flex-wrap:wrap;gap:8px}
+.sorechips .mchip{min-height:40px;padding:8px 14px;font-size:13px;border:0}
+.mchip.sore-1{background:#FFF1D6;color:#9A6400}
+.mchip.sore-2{background:#FDE2E2;color:#C42B30}

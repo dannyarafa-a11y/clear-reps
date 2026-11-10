@@ -40,12 +40,12 @@ function loadColor(L,band){
 }
 const STATUS_TXT={none:"Not trained",light:"Light",building:"Building",good:"Right amount",high:"A lot",over:"Overworked"};
 function muscleStatus(opts){
-  const {load,raw,last}=muscleLoad(opts), band=loadBand(), out={};
+  const {load,raw,last}=muscleLoad(opts), band=loadBand(), out={}, sore=soreRecent(48);
   Object.keys(MUSCLES).forEach(m=>{
     const L=load[m], r=raw[m];
     const k = L<.4?"none": L<band.lo*.5?"light": L<band.lo?"building": L<=band.hi?"good": L<=band.hi*1.35?"high":"over";
-    const recovering = last[m]!==null && last[m]<1.5 && L>=band.lo*.45;
-    out[m]={k,L,raw:r,last:last[m],recovering,color:k==="none"?null:loadColor(L,band)};
+    const recovering = (last[m]!==null && last[m]<1.5 && L>=band.lo*.45) || !!sore[m];
+    out[m]={k,L,raw:r,last:last[m],recovering,sore:sore[m]?.l||0,color:k==="none"?null:loadColor(L,band)};
   });
   return {mus:out,band};
 }
@@ -67,7 +67,7 @@ function insightLines(ins){
   const row=(c,h,t,sub)=>`<li><i class="dot" style="background:${c}"></i><span><b>${h}</b> ${esc(t)}${sub?` <span class="muted">${esc(sub)}</span>`:""}</span></li>`;
   const out=[];
   if(ins.needs.length) out.push(row("#3366FF","Needs work:",mNames(ins.needs.slice(0,4))+".","Little this week."));
-  if(ins.rec.length) out.push(row("#F2A516","Recovering:",mNames(ins.rec.slice(0,4))+".","Trained in the last day."));
+  if(ins.rec.length) out.push(row("#F2A516","Recovering:",mNames(ins.rec.slice(0,4))+".","Trained in the last day or sore."));
   if(ins.over.length) out.push(row("#E5484D","Overworked:",mNames(ins.over)+".","Rest them a few days."));
   if(ins.good.length&&out.length<3) out.push(row("#12A365","Right amount:",mNames(ins.good.slice(0,4))+".",""));
   if(!out.length) out.push(row("#C9D7FF","Fresh start.","Nothing logged in the last 7 days.",""));
@@ -100,7 +100,7 @@ function planAdjust(day,res,ph,st){
 }
 const ADJ_WHY={
   over:m=>`${mNames(m)}: already overworked this week.`,
-  rec:m=>`${mNames(m)}: trained in the last day, still recovering.`,
+  rec:m=>`${mNames(m)}: still recovering (trained in the last day or reported sore).`,
   high:m=>`${mNames(m)}: already had a lot this week.`,
   low:m=>`${mNames(m)}: little or no work this week.`
 };
@@ -304,7 +304,8 @@ function workoutDetail(wid){
     <div><div class="eyebrow">${esc(fmtDate(w.date))}${time?" · "+esc(time):""}</div><h2>${esc(histName(w))}</h2></div>
     <div class="facts"><div><b>${mins??"–"}</b><span>minutes</span></div><div><b>${done.length}</b><span>sets</span></div><div><b>${vol?Math.round(vol).toLocaleString():ids.length}</b><span>${vol?"kg lifted":"exercises"}</span></div></div>
     ${feelTxt?`<p class="small"><b>Felt:</b> ${feelTxt}</p>`:""}
-    <div class="figcard">${bodyFig(doneLevels(w))}${intensityKey()}<div class="mchips">${musRows}</div><p class="tiny muted center">Sets per muscle · helpers count half</p></div>
+    <div class="figcard">${bodyFig(sessionGrad(w))}${sessionKey()}<div class="mchips">${musRows}</div><p class="tiny muted center">Sets per muscle · helpers count half</p></div>
+    ${soreMuscles(w).length&&S.canWrite?`<div class="card sorecard"><h3>Soreness after</h3><p class="small muted" style="margin:0">${w.soreAt?`Logged ${esc(fmtDate(w.soreAt.slice(0,10)))}. `:""}Tap once for a bit sore, twice for very sore.</p>${soreChips(w,S.soreDraft?.[w.id])}<div class="row"><button class="btn" data-act="sore-save" data-id="${esc(w.id)}">Save soreness</button></div></div>`:""}
     ${hrDetail(w)}
     <div><h3>Exercises</h3><div class="wdlist">${exCards||`<p class="small muted">No sets logged.</p>`}</div></div>
     ${w.notes?`<div class="note">“${esc(w.notes)}”</div>`:""}
@@ -350,4 +351,70 @@ function ownCard(can){
     <p class="small muted" style="margin:0">Start empty and add each exercise as you do it. What are you planning to train?</p>
     <div class="mchips">${OWN_GROUPS.map(([g])=>`<button class="mchip ${sel.has(g)?"on":""}" data-act="own-g" data-g="${g}" aria-pressed="${sel.has(g)}">${g}</button>`).join("")}</div>
     <button class="btn block ${sel.size?"primary":""}" data-act="own-start" ${can?"":"disabled"}>${sel.size?`Start · ${[...sel].join(" + ")}`:"Start without a plan"}</button></section>`;
+}
+
+/* ---------- inside one workout: same blue → green → red scale, judged per session ----------
+   Roughly 2–5 sets per muscle in one workout while easing back in (3–8 when building) is the useful range;
+   past that, extra sets add tiredness more than results. */
+function sessionBand(){ const ph=phaseFor(currentWeek()); return ph.key==="build"?{lo:3,hi:8,ph}:{lo:2,hi:5,ph}; }
+function sessionCounts(w){ const c={}; (w.sets||[]).filter(s=>s.done).forEach(s=>{ const e=EX[s.ex]; if(!e) return; e.m.forEach(m=>c[m]=(c[m]||0)+1); e.s.forEach(m=>c[m]=(c[m]||0)+.5); }); return c; }
+function sessionKind(n,b){ return n<b.lo*.5?"light":n<b.lo?"building":n<=b.hi?"good":n<=b.hi*1.35?"high":"over"; }
+function sessionGrad(w,withPlan){
+  const b=sessionBand(), c=sessionCounts(w), lv={};
+  Object.entries(c).forEach(([m,n])=>{ if(n>0){ const k=sessionKind(n,b); lv[m]={col:loadColor(n,b),rank:RANK[k]}; } });
+  if(withPlan) sessionDay(w).ex.forEach(id=>{ const e=EX[id]; if(!e) return; [...e.m,...e.s].forEach(m=>{ if(!lv[m]) lv[m]="plan"; }); });
+  return lv;
+}
+function sessionKey(plan){
+  const b=sessionBand();
+  return `<div class="loadkey"><div class="loadbar" style="background:linear-gradient(90deg,${loadColor(b.lo*.2,b)},${loadColor(b.lo*.8,b)},${loadColor((b.lo+b.hi)/2,b)},${loadColor(b.hi*1.25,b)},${loadColor(b.hi*2,b)})"></div>
+    <div class="loadlbl"><span>A little</span><span>Right amount</span><span>Too much</span></div>${plan?`<div class="heatkey" style="margin-top:4px"><span><i style="background:var(--m-plan)"></i>Still to do</span></div>`:""}</div>`;
+}
+/* one plain line: which muscles have had enough today */
+function sessionLine(w){
+  const b=sessionBand(), c=sessionCounts(w), by={good:[],high:[],over:[]};
+  Object.entries(c).forEach(([m,n])=>{ const k=sessionKind(n,b); if(by[k]) by[k].push(m); });
+  const out=[];
+  if(by.over.length) out.push(`<b style="color:#E5484D">Too much:</b> ${esc(mNames(by.over))}. More sets now mostly add fatigue.`);
+  if(by.high.length) out.push(`<b style="color:#C98500">Plenty:</b> ${esc(mNames(by.high))}.`);
+  if(by.good.length) out.push(`<b style="color:#12A365">Right amount:</b> ${esc(mNames(by.good))}.`);
+  return out.length?`<p class="small" style="margin:6px 0 0">${out.join(" ")}</p>`:"";
+}
+
+/* ---------- soreness check-in ----------
+   Saved on the workout as sore:{muscle:1|2} (1 = a bit, 2 = very). Sore muscles count as still recovering,
+   so the next planned workout gives them a set less, and the brief says why. */
+const SORE_TXT=["","A bit sore","Very sore"];
+function soreRecent(hours=72){
+  const now=Date.now(), out={};
+  doneWorkouts().forEach(w=>{ const t=Date.parse(w.soreAt||""); if(!w.sore||!isFinite(t)||now-t>hours*36e5) return; Object.entries(w.sore).forEach(([m,l])=>{ if(l>0&&(!out[m]||l>out[m].l)) out[m]={l,at:t}; }); });
+  return out;
+}
+const soreMuscles = w => { const c=sessionCounts(w); return Object.keys(MUSCLES).filter(m=>c[m]>=1); };
+function soreChips(w,draft){
+  const cur=draft||w.sore||{};
+  return `<div class="mchips sorechips">${soreMuscles(w).map(m=>{ const l=cur[m]||0; return `<button class="mchip sore-${l}" data-act="sore-t" data-id="${esc(w.id)}" data-m="${m}">${esc(MUSCLES[m].n)}${l?` · ${l===2?"very":"a bit"}`:""}</button>`; }).join("")}</div>`;
+}
+/* Home card: shows for 2 days after a workout until answered */
+function soreCard(){
+  const now=Date.now();
+  const w=doneWorkouts().find(x=>{ const t=Date.parse(x.finishedAt||""); return isFinite(t)&&now-t<48*36e5&&now-t>2*36e5; });
+  if(!w||!soreMuscles(w).length) return "";
+  const t=Date.parse(w.finishedAt), when=new Date(t).toDateString()===new Date().toDateString()?"earlier today":"yesterday";
+  const asked=w.soreAt&&now-Date.parse(w.soreAt)<12*36e5;
+  if(asked&&!S.soreOpen) return "";
+  const draft=S.soreDraft?.[w.id];
+  return `<section class="card sorecard"><div class="eyebrow">Check-in</div><h3>Anything sore from ${esc(when)}'s workout?</h3>
+    <p class="small muted" style="margin:0">Tap once for a bit sore, twice for very sore. Sore muscles get a lighter next session.</p>
+    ${soreChips(w,draft)}
+    <div class="row"><button class="btn primary" data-act="sore-save" data-id="${esc(w.id)}">Save</button><button class="btn" data-act="sore-none" data-id="${esc(w.id)}">Nothing's sore</button></div></section>`;
+}
+async function saveSore(id,sore){
+  const w=S.workouts.find(x=>x.id===id); if(!w) return;
+  const clean=Object.fromEntries(Object.entries(sore||{}).filter(([,l])=>l>0));
+  const upd={...w,sore:clean,soreAt:new Date().toISOString()};
+  const {id:_,...body}=upd;
+  try{ await Store.put("workouts",id,body); S.workouts=S.workouts.map(x=>x.id===id?upd:x); if(S.soreDraft) delete S.soreDraft[id]; S.soreOpen=false; render(); if(S.detailId===id) workoutDetail(id);
+    toast(Object.keys(clean).length?"Saved. Next session goes easier on "+mNames(Object.keys(clean)).toLowerCase():"Saved. All good"); }
+  catch(e){ toast("Couldn't save. Try again."); }
 }

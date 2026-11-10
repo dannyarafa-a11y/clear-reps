@@ -38,7 +38,7 @@ if ("serviceWorker" in navigator) addEventListener("load", () => {
     document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") reg.update().catch(() => {}); });
   }).catch(() => {});
   let reloaded = false;
-  navigator.serviceWorker.addEventListener("controllerchange", () => { if (had && !reloaded) { reloaded = true; location.reload(); } });
+  navigator.serviceWorker.addEventListener("controllerchange", () => { const busy = typeof S !== "undefined" && S.active; if (had && !reloaded && !busy) { reloaded = true; location.reload(); } });
 });
 </script>
 </body>
