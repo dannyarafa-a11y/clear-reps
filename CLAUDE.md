@@ -81,6 +81,6 @@ Open ideas Danny hasn't picked yet:
 - Supersets: carry pairings into "Do again" / "Save as a workout", show them in history,
   maybe an optional faster A/B/C with built-in pairs.
 - Apple Health sync fixes on the iPhone Shortcut (steps double-count, empty sleep).
-- Sign-up lock: after Danny signs in for the first time, turn off "Allow new users to sign up" in
-  Supabase → Authentication → Sign In / Providers (check whether he has signed in yet).
+- Sign-up lock: Danny has signed in (Nov 7), so "Allow new users to sign up" can now be turned off
+  in Supabase → Authentication → Sign In / Providers (dashboard only; not possible via SQL).
 - A real standing quad stretch photo is missing from the library (side-lying is used instead).
