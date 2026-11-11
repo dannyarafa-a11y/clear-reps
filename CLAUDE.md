@@ -62,3 +62,25 @@ on his iPhone as a home-screen app. He usually tests on the phone, often mid-wor
 - The Apple Health sync key lives only in his iPhone Shortcut. Never commit it.
 - Known open items: Shortcut steps double-count (set Start Date "is today", Group by Day);
   sleep arrives empty (check Zepp → Apple Health → Sleep).
+
+## Working on this from another Claude account
+- Connect GitHub (claude.ai → Settings → Connectors) with the same GitHub user, `dannyarafa-a11y`,
+  and make sure the Claude GitHub app has access to `clear-reps`. Then start a Claude Code session
+  on this repo. Commit straight to `main`; GitHub Pages redeploys in about a minute.
+- Supabase is only needed for database work: connect the Supabase connector with Danny's own
+  Supabase login (project `clear-reps`).
+- Only one session should edit at a time. Pull before starting.
+- Commit author: Danny Arafa. Danny reads replies on his phone: keep them short, no file paths.
+
+## Where we left off (Nov 2026)
+Done recently: Gym | Home switch, My own workout, rolling 7-day map, per-session map, soreness
+check-in, learning layer, monthly AI summary, stretch fixes (single-person photos, coverage map,
+video links), coach tab removed.
+
+Open ideas Danny hasn't picked yet:
+- Supersets: carry pairings into "Do again" / "Save as a workout", show them in history,
+  maybe an optional faster A/B/C with built-in pairs.
+- Apple Health sync fixes on the iPhone Shortcut (steps double-count, empty sleep).
+- Sign-up lock: after Danny signs in for the first time, turn off "Allow new users to sign up" in
+  Supabase → Authentication → Sign In / Providers (check whether he has signed in yet).
+- A real standing quad stretch photo is missing from the library (side-lying is used instead).
