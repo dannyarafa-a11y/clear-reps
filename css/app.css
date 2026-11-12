@@ -1,22 +1,24 @@
-@font-face{font-family:"Outfit";font-style:normal;font-weight:500;font-display:swap;src:url("../fonts/outfit-latin-500-normal.woff2") format("woff2")}
-@font-face{font-family:"Outfit";font-style:normal;font-weight:600;font-display:swap;src:url("../fonts/outfit-latin-600-normal.woff2") format("woff2")}
-@font-face{font-family:"Outfit";font-style:normal;font-weight:700;font-display:swap;src:url("../fonts/outfit-latin-700-normal.woff2") format("woff2")}
-@font-face{font-family:"Outfit";font-style:normal;font-weight:800;font-display:swap;src:url("../fonts/outfit-latin-800-normal.woff2") format("woff2")}
-@font-face{font-family:"Manrope";font-style:normal;font-weight:400;font-display:swap;src:url("../fonts/manrope-latin-400-normal.woff2") format("woff2")}
-@font-face{font-family:"Manrope";font-style:normal;font-weight:500;font-display:swap;src:url("../fonts/manrope-latin-500-normal.woff2") format("woff2")}
-@font-face{font-family:"Manrope";font-style:normal;font-weight:600;font-display:swap;src:url("../fonts/manrope-latin-600-normal.woff2") format("woff2")}
-@font-face{font-family:"Manrope";font-style:normal;font-weight:700;font-display:swap;src:url("../fonts/manrope-latin-700-normal.woff2") format("woff2")}
+@font-face{font-family:"Bricolage Grotesque";font-style:normal;font-weight:600;font-display:swap;src:url("../fonts/bricolage-grotesque-latin-600-normal.woff2") format("woff2")}
+@font-face{font-family:"Bricolage Grotesque";font-style:normal;font-weight:700;font-display:swap;src:url("../fonts/bricolage-grotesque-latin-700-normal.woff2") format("woff2")}
+@font-face{font-family:"Bricolage Grotesque";font-style:normal;font-weight:800;font-display:swap;src:url("../fonts/bricolage-grotesque-latin-800-normal.woff2") format("woff2")}
+@font-face{font-family:"DM Sans";font-style:normal;font-weight:400;font-display:swap;src:url("../fonts/dm-sans-latin-400-normal.woff2") format("woff2")}
+@font-face{font-family:"DM Sans";font-style:normal;font-weight:500;font-display:swap;src:url("../fonts/dm-sans-latin-500-normal.woff2") format("woff2")}
+@font-face{font-family:"DM Sans";font-style:normal;font-weight:600;font-display:swap;src:url("../fonts/dm-sans-latin-600-normal.woff2") format("woff2")}
+@font-face{font-family:"DM Sans";font-style:normal;font-weight:700;font-display:swap;src:url("../fonts/dm-sans-latin-700-normal.woff2") format("woff2")}
 /* Layout: one calm phone column. Light, airy single theme: white cards on a soft grey ground, one friendly blue that marks "the muscle you're working" and the next action. No gradients, no glow. */
 :root{
-  --bg:#F6F7FA; --bg2:#EEF1F5; --surface:#FFFFFF; --surface2:#F2F4F8; --line:#E7EAF0; --line2:#D9DEE6;
-  --ink:#161A22; --muted:#687083; --faint:#9AA2B1;
-  --accent:#3366FF; --accent2:#3366FF; --accent-ink:#FFFFFF; --accent-soft:#EAF0FF;
-  --good:#12A365; --warn:#C98200; --hot:#E5484D; --sleep:#7A6CF0;
-  --m-idle:#E2E6ED; --m-skin:#F2F4F7; --m-line:#CDD3DD;
-  --shadow:0 1px 2px rgba(22,30,50,.04),0 4px 16px rgba(22,30,50,.05);
-  --f-display:"Outfit",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --f-body:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --r:20px; --r-s:14px;
+  /* Sunny Blocks: warm cream ground, deep brown ink, and three friendly colour blocks (butter, mint, pink).
+     Buttons are ink. Sky blue is kept for one job only: the muscles on the body map. */
+  --bg:#FFF8EC; --bg2:#F6EBD8; --surface:#FFFFFF; --surface2:#F3E7D3; --line:#F0E4CF; --line2:#E0D0B4;
+  --ink:#23180F; --muted:#6B5A48; --faint:#857460;
+  --accent:#23180F; --accent2:#23180F; --accent-ink:#FFF8EC; --accent-soft:#FFEDB3;
+  --sun:#FFD75E; --sun-soft:#FFE58F; --mint:#BFE8D2; --pink:#FFC9D6; --muscle:#3D7DFF;
+  --good:#0F7A52; --warn:#9A5B00; --hot:#D63B40; --sleep:#7A6CF0;
+  --m-idle:#EBD5BA; --m-skin:#F5E3CD; --m-line:#C9AD8C; --m-plan:#BFA78A; --m-gap:#FFF8EC; --m-shadow:rgba(35,24,15,.09); --muscle-pale:#D3E2FF;
+  --shadow:none;
+  --f-display:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-body:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --r:28px; --r-s:20px;
   color-scheme:light;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -363,7 +365,7 @@ code{font-family:ui-monospace,Menlo,monospace;font-size:12px;background:var(--bg
 .qa{border-style:dashed}
 
 /* ---------- v2 additions ---------- */
-:root{--m-plan:#C4CBD8}
+
 .sbar .segs{border:0;background:none;padding:6px 0;cursor:pointer;min-height:24px}
 .sbar .pill.num{min-height:34px;padding:5px 10px;font-size:12px;gap:4px}
 .hint.grp{background:#FFF4DF;color:#9A5B00}
@@ -497,3 +499,165 @@ pre.report{white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,M
 .sthead .stfig{width:64px;flex:none;margin-left:auto}
 .sthead .tt{flex:1;min-width:0}
 .stcard .vid{align-self:flex-start}
+
+/* ---------- Sunny Blocks theme (v3) ----------
+   Fewer boxes and borders, bigger friendlier type, colour blocks for the things that matter:
+   butter for "do this now", mint for progress, pink for wins. */
+body{font-size:16px}
+h1,h2,h3{letter-spacing:-.02em}
+h1,h2{font-weight:800} h3{font-size:19px;font-weight:700}
+.hello,.title{font-size:36px;font-weight:800;line-height:1.03;letter-spacing:-.03em}
+.big{font-size:40px;line-height:1;letter-spacing:-.03em}
+.small{font-size:14px}
+.eyebrow{font:700 15px/1.25 var(--f-body);letter-spacing:0;text-transform:none;color:var(--ink)}
+.figside span,.mins span,.facts span,.avoid span,.feelit span,.target .tl,.stepper .lbl,.xph figcaption,.zoom figcaption,.hstats span,.loadlbl{text-transform:none;letter-spacing:0;font-size:13px}
+.card,.figcard,.mpanel,.health,.brief,.stcard,.daypick,.wdex,.swaprow,.tick,.notice,.facts div,.xph button{border:0}
+.card{padding:20px}
+.btn{border:0;background:var(--surface2);font-size:16px;min-height:52px}
+.btn.primary{background:var(--ink);color:var(--accent-ink);box-shadow:none}
+.btn.ghost{background:transparent}
+.btn.xl{min-height:62px;font-size:21px;font-weight:700;letter-spacing:-.01em}
+.pill{border:0;background:var(--surface2);font-size:14px;min-height:40px}
+.pill.quiet{background:transparent}
+.pill.on{background:var(--ink);color:var(--accent-ink)}
+.pill.warn{background:var(--pink);color:var(--ink)}
+.icon{border:0;background:var(--surface2);width:46px;height:46px}
+.link{color:var(--ink);font-size:15px;text-decoration-color:var(--line2)}
+input,select,textarea{border:0;background:var(--bg2);border-radius:16px}
+.sheet-card{background:var(--bg);border:0}
+.sheet-bg{background:rgba(35,24,15,.35)}
+.zoom{background:rgba(35,24,15,.9)}
+.note{border:0;background:var(--surface2);font-size:15px;color:var(--ink);border-radius:20px}
+.notice{background:var(--surface2);color:var(--ink)}
+.mchip{font-size:13px;background:var(--surface2);color:var(--ink)}
+.mchip.on{background:var(--ink);color:var(--accent-ink)}
+.owncard .mchip,.sorechips .mchip{font-size:15px;min-height:44px}
+.seg{background:var(--surface2)}
+.seg button{color:var(--ink);font-size:14px}
+.seg button.on{background:var(--ink);color:var(--accent-ink);box-shadow:none}
+.facts div{background:var(--surface);border-radius:22px}
+.facts b{font-weight:800;font-size:26px}
+.tick{background:var(--surface);border-radius:22px;font-size:16px}
+.tick.on{background:var(--mint)}
+.brief summary b{font-size:20px}
+.brief ul,.insight,.learned ul{font-size:15px}
+
+/* tabs: three chunky pills */
+.tabs-in{max-width:420px;gap:8px;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;border:0;box-shadow:none;padding:0}
+.tab{background:var(--surface2);min-height:54px;font-size:16px;font-weight:600;color:var(--ink);justify-content:center;box-shadow:0 8px 22px rgba(35,24,15,.16)}
+.tab svg{display:none}
+.tab[aria-current="page"]{background:var(--ink);color:var(--accent-ink);font-weight:700}
+
+/* home */
+.hero{background:var(--sun);border:0;border-radius:36px;padding:26px 20px 16px;gap:14px}
+.hero::before{content:"";position:absolute;right:-60px;top:-70px;width:210px;height:210px;border-radius:50%;background:var(--sun-soft)}
+.hero::after{content:"";position:absolute;right:34px;top:26px;width:70px;height:70px;border-radius:50%;background:#FF9FB6}
+.hero>*{position:relative;z-index:1}
+.hero-sub{font-size:17px;font-weight:500;margin-top:6px}
+.hero-list{font-size:16px;line-height:1.45}
+.hero-fig{background:var(--bg);border-radius:26px;padding:14px 10px 12px;display:flex;flex-direction:column;gap:8px}
+.hero-fig .fig{max-height:230px}
+.hero-meta{justify-content:flex-start}
+.hero-meta span{background:rgba(35,24,15,.1);color:var(--ink);font-size:13px}
+.hero-meta .adj{background:var(--ink);color:var(--accent-ink)}
+.hero .link{text-decoration-color:rgba(35,24,15,.35)}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.tile{border-radius:30px;padding:20px 18px;display:flex;flex-direction:column;gap:8px;min-width:0;font-size:15px;line-height:1.35}
+.tile.mint{background:var(--mint)} .tile.pink{background:var(--pink)}
+.tile .tl{font-size:15px;font-weight:700}
+.tile .tn{font-family:var(--f-display);font-weight:800;font-size:34px;line-height:1.05;letter-spacing:-.03em}
+.rdots{display:flex;gap:7px;flex-wrap:wrap}
+.rdots i{width:28px;height:28px;border-radius:50%;background:rgba(35,24,15,.16);display:grid;place-items:center}
+.rdots i.done{background:var(--ink)}
+.rdots i.done::after{content:"";width:6px;height:11px;border:solid var(--mint);border-width:0 3px 3px 0;transform:translate(0,-1px) rotate(45deg)}
+.rdots i.next{background:transparent;border:3px solid var(--ink)}
+.health.setup{border:0}
+.resume{border:0;background:var(--mint)}
+.tip p{font-size:15px}
+.refresh{background:var(--mint)}
+.refresh .muted{color:var(--ink)}
+.refresh .swaps{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:15px}
+.refresh .btn{background:var(--bg)} .refresh .btn.primary{background:var(--ink)}
+
+/* workout */
+.segs i{height:10px;border-radius:5px;background:var(--line2)}
+.segs i.done,.setpips i.done{background:var(--ink)}
+.segs i.cur,.setpips i.cur{background:var(--pink);box-shadow:inset 0 0 0 2px var(--ink)}
+.target .tl{background:var(--ink);color:var(--accent-ink);padding:5px 11px}
+.target b{font-size:24px;font-weight:800}
+.target .up{font-size:14px}
+.logger{background:var(--sun);border:0;border-radius:36px;padding:22px 18px}
+.logger.done{background:var(--mint)}
+.setlabel{font-size:24px;font-weight:800;letter-spacing:-.02em}
+.setlabel .muted,.logger .muted,.logger .link{color:var(--ink)}
+.setlabel .muted{opacity:.6}
+.setpips i{height:10px;border-radius:5px;background:rgba(35,24,15,.18)}
+.hint{background:var(--bg);color:var(--ink);font-size:15px;font-weight:500;border-radius:16px;padding:10px 14px}
+.hint.grp{background:var(--pink);color:var(--ink)}
+.stepper .ctl{background:var(--bg);border-radius:26px;padding:8px}
+.stepper button{border:0;background:var(--ink);color:var(--accent-ink);border-radius:50%;font-weight:700}
+.stepper input{font-weight:800}
+.stepper .lbl{font-size:14px;color:var(--ink);font-weight:600}
+.logger .pill{background:var(--bg)} .logger .pill.on{background:var(--ink)} .logger .pill.quiet{background:transparent}
+.q{font-family:var(--f-display);font-size:19px;font-weight:700;text-align:left;color:var(--ink)}
+.feel{gap:10px}
+.feel button{border:0;border-radius:26px;min-height:78px;background:var(--bg);color:var(--ink)}
+.feel button b{font-size:21px;font-weight:800}
+.feel .f-easy b,.feel .f-good b,.feel .f-tough b{color:inherit}
+.feel button span{font-size:13px;color:inherit}
+.feel .f-easy{background:var(--mint)} .feel .f-good{background:var(--ink);color:var(--accent-ink)} .feel .f-tough{background:var(--pink)}
+.feel.overall button{background:var(--surface2)}
+.feel button.on,.feel.overall button.on{background:var(--ink);color:var(--accent-ink)}
+.rest-in{border:0;background:var(--ink);color:var(--accent-ink);box-shadow:0 10px 30px rgba(35,24,15,.3);backdrop-filter:none;-webkit-backdrop-filter:none}
+.rest-in .muted{color:#E6D7BD}
+.rest-in .pill{background:rgba(255,248,236,.16);color:var(--accent-ink)}
+.rest-bar{background:rgba(255,248,236,.2)} .rest-bar i{background:var(--sun)}
+.rest-in.go .rest-time{color:var(--mint)} .rest-in.go .rest-bar i{background:var(--mint)}
+
+/* finish: lead with the win */
+.cele{position:relative;overflow:hidden;background:var(--sun);border-radius:36px;padding:28px 22px 22px;display:flex;flex-direction:column;gap:12px}
+.cele::before{content:"";position:absolute;right:-60px;top:-70px;width:210px;height:210px;border-radius:50%;background:var(--sun-soft)}
+.cele::after{content:"";position:absolute;right:30px;top:24px;width:64px;height:64px;border-radius:50%;background:#FF9FB6}
+.cele>*{position:relative;z-index:1}
+.cele .title{max-width:260px}
+.cele p{font-size:16px;line-height:1.45}
+.cele-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px}
+.cele-stats div{background:var(--bg);border-radius:22px;padding:12px 6px;display:flex;flex-direction:column;align-items:center}
+.cele-stats b{font-family:var(--f-display);font-weight:800;font-size:30px;line-height:1.1}
+.cele-stats span{font-size:13px}
+.figcard h3{text-align:center}
+
+/* progress */
+.wkbar{background:var(--surface2)} .wkbar i{background:var(--ink)}
+.wk{font-size:12px}
+.mchip{border:0}
+.rdots{gap:6px} .rdots i{width:24px;height:24px}
+.rdots i.done::after{width:5px;height:10px}
+.top .pill.quiet{min-width:44px;min-height:44px;justify-content:center;padding:0}
+.top .pill.quiet svg{width:22px;height:22px}
+.howbox{border:0}
+.sbar .pill.num{background:var(--surface2);font-size:14px;min-height:40px;padding:6px 12px;color:var(--ink)}
+.tile.sun{background:var(--sun)}
+.tiles.three{grid-template-columns:repeat(3,1fr);gap:10px}
+.tiles.three .tile{padding:16px 12px;border-radius:26px;font-size:13px;gap:4px}
+.tiles.three .tn{font-size:28px}
+.tiles.three .tn small{font-size:14px;font-weight:700;letter-spacing:0}
+
+/* body map: each muscle is its own shape with a thin gap, like an illustration */
+.fig .mus path{stroke:var(--m-gap);stroke-width:1.4px;stroke-linejoin:round;vector-effect:non-scaling-stroke;paint-order:fill}
+.figs.mini .fig .mus path{stroke-width:.6px}
+.fig .sel path{stroke:var(--ink);stroke-width:2.5px}
+.fig{max-height:320px}
+.figcard.big .fig{max-height:420px}
+.fig [data-act="muscle"]{transition:opacity .15s}
+/* muscle guide */
+.mlearn{gap:14px}
+.mgroup{display:flex;flex-direction:column;gap:8px}
+.mlearn .mchip{min-height:44px;padding:8px 16px;font-size:15px}
+.mfacts{display:flex;flex-direction:column;gap:10px}
+.mfact{background:var(--surface);border-radius:22px;padding:14px 18px}
+.mfact b,.mtip b{font-family:var(--f-display);font-size:17px}
+.mfact p,.mtip p{margin-top:2px;font-size:15px;line-height:1.45}
+.mtip{background:var(--mint);border-radius:22px;padding:14px 18px}
+.mguide .swaprow{border-radius:20px}
+.figpick{margin:6px auto 0}
