@@ -206,12 +206,12 @@ Object.assign(EX,{
 });
 ["h_squat","h_split","h_hamwalk","h_slbridge","h_pike","h_ytw","h_calf","h_pushup","h_decline","h_widepush","h_chairdip","h_closepush","h_towelcurl","h_tablecurl","h_tablerow","h_doorrow","h_snow","h_superman","h_thrust","h_sideplank"].forEach(k=>{ const e=EX[k]; if(e.tip){ e.cues=[...e.cues,e.tip.replace(/\.$/,"")+"."]; } e.needs=[]; e.alts=e.alts||[]; e.home=true; if(e.lc===undefined) e.lc=null; });
 EX.h_hamwalk.lib=null;
+const HOME_WARM=["Arm circles, 10 each way","Wall push-ups × 10","Bodyweight squats × 10","Glute bridges × 10","Cat-cow × 8"];
 const HOME_DAYS = {
- A:{name:"Legs + Shoulders",ex:["h_squat","h_split","h_hamwalk","h_slbridge","h_pike","h_ytw","h_calf"]},
- B:{name:"Chest + Arms",ex:["h_pushup","h_decline","h_widepush","h_chairdip","h_towelcurl","h_closepush","h_tablecurl"],
-  warm:["Arm circles, 10 each way","Wall push-ups × 10","Scapula push-ups × 10 (arms straight, squeeze and spread the shoulder blades)","Shoulder rolls × 10","Wrist circles, 10 each way"]},
- C:{name:"Back + Glutes + Core",ex:["h_tablerow","h_doorrow","h_snow","h_thrust","h_superman","plank","deadbug","h_sideplank"],
-  warm:["Cat-cow × 8","Arm swings across the chest × 15","Bird dog × 6 each side","Glute bridges × 10","Hip hinge with hands on hips × 10"]}
+ "1":{ex:["h_squat","h_pushup","h_tablerow","h_ytw","h_towelcurl"],warm:HOME_WARM},
+ "2":{ex:["h_hamwalk","h_pike","h_doorrow","h_chairdip","plank"],warm:HOME_WARM},
+ "3":{ex:["h_split","h_decline","h_tablerow","h_thrust","h_snow"],warm:HOME_WARM},
+ "4":{ex:["h_slbridge","h_pike","h_doorrow","h_calf","deadbug"],warm:HOME_WARM}
 };
 const atHome = () => S.settings?.where==="home";
 /* what's available right now: My gym list at the gym, nothing but the body (and bands if ticked) at home */
@@ -288,26 +288,40 @@ function zoomOpen(lib,i){
 }
 function zoomClose(){ const z=$("#zoom"); z.hidden=true; z.innerHTML=""; }
 
-const DAYS = [
- {id:"A",name:"Legs + Shoulders",ex:["legpress","rdl","lunge","legcurl","shpress","lateral","calf"],
-  warm:["Leg swings, 10 each leg (front-back and side to side)","Bodyweight squats × 10","Glute bridges × 10","Walking lunges × 5 each leg","Arm circles, 10 each way"],
-  cool:["Standing quad stretch","Seated hamstring stretch","Figure-4 glute stretch","Wall calf stretch","Cross-body shoulder stretch"]},
- {id:"B",name:"Chest + Arms",ex:["dbbench","incline","pecfly","pushdown","curl","ohext","hammer"],
-  warm:["Arm circles, 10 each way","Band pull-aparts × 15","Incline push-ups × 8","Band shoulder pass-throughs × 10","Wrist circles, 10 each way"],
-  cool:["Doorway chest stretch","Overhead triceps stretch","Biceps wall stretch","Child's pose with arms forward"]},
- {id:"C",name:"Back + Glutes + Core",ex:["pulldown","cablerow","dbrow","facepull","hipthrust","backext","plank","deadbug"],
-  warm:["Cat-cow × 8","Band pull-aparts × 15","Dead hang from a bar, 20 seconds","Bird dog × 6 each side","Hip hinge drill with a stick × 10"],
-  cool:["Child's pose with side reach (lats)","Knees to chest","Figure-4 glute stretch","Thread the needle, each side"]}
+/* The plan: a round of four full-body workouts, done in order whenever he trains (no weekly target).
+   Each one is a leg lift, a push and a pull (the first three, 3 sets) plus two finishers (2 sets).
+   The main lifts alternate between two sets, so each comes back every second workout and progress is
+   easy to see; the finishers rotate across all four so no two workouts in a round feel the same.
+   BLOCKS are the versions of the round. The app offers the next one about every six rounds
+   (settings.block); nothing changes unless he says yes. */
+const FB_WARM=["Leg swings, 10 each leg (front-back and side to side)","Bodyweight squats × 10","Glute bridges × 10","Arm circles, 10 each way","Band pull-aparts × 15"];
+const FB_COOL=["Standing quad stretch","Seated hamstring stretch","Doorway chest stretch","Child's pose with side reach (lats)","Cross-body shoulder stretch"];
+const BLOCKS=[
+ {"1":["legpress","dbbench","pulldown","lateral","curl"],
+  "2":["rdl","shpress","cablerow","pushdown","plank"],
+  "3":["legpress","dbbench","pulldown","hipthrust","facepull"],
+  "4":["rdl","shpress","cablerow","calf","deadbug"]},
+ {"1":["legpress","incline","pulldown","lateral","hammer"],
+  "2":["rdl","shpress","cablerow","ohext","deadbug"],
+  "3":["legpress","incline","pulldown","hipthrust","reversefly"],
+  "4":["rdl","shpress","cablerow","calf","plank"]}
 ];
+const ROUND_LEN=4, MAIN_LIFTS=3, REFRESH_ROUNDS=6;
+const DAYS = ["1","2","3","4"].map(id=>({id,name:"Full body "+id,ex:[...BLOCKS[0][id]],warm:FB_WARM,cool:FB_COOL}));
+const planBlock = () => { const b=+S.settings?.block||0; return ((b%BLOCKS.length)+BLOCKS.length)%BLOCKS.length; };
+/* point the four days at the current block's exercises (after settings load, and when a refresh is accepted) */
+function applyBlock(){ const B=BLOCKS[planBlock()]; DAYS.forEach(d=>{ d.ex=[...B[d.id]]; }); }
 
 const BASICS = [
- {t:"How hard is hard enough?",b:"Use reps in reserve (RIR): how many more clean reps you could have done when you stop. RIR 2 means two more were possible. Most working sets should end at RIR 1–3. That is hard enough to make progress and far enough from failure that you recover for the next session."},
- {t:"How many sets is right?",b:"Count hard sets per muscle per week. Under about 4 does very little. 4–10 is the comeback zone and fine for the first weeks. 10–20 is where most people grow best. Past about 20, extra sets mostly add fatigue. The Program tab shows where you sit for every muscle."},
- {t:"Warm-up vs stretching",b:"Before lifting: 5 minutes of easy cardio, then moving stretches (swings, circles, light reps). Long static holds before lifting don't help and can make you slightly weaker. After the session: static holds of 30–45 seconds for the muscles you trained."},
- {t:"When to add weight",b:"Each exercise has a rep range, like 8–12. Keep the weight the same and add reps each session. When every set hits the top of the range with good form, add the smallest jump next time and start back at the bottom of the range. The app tells you which case you're in."},
- {t:"Rest between sets",b:"About 2 minutes for big lifts (presses, rows, leg press, deadlifts). 60–90 seconds for small ones (curls, raises). The timer starts each time you log a set."},
+ {t:"How hard is hard enough?",b:"Stop each set when you could still do 1 to 3 more clean reps. Trainers call this reps in reserve, or RIR: RIR 2 means two more were possible. That is hard enough to make progress and far enough from failure that you recover for next time. Easy, Good and Tough are the same idea: Good means 2 or 3 left."},
+ {t:"How many sets is right?",b:"Count hard sets per muscle per week. Under about 4 does very little. 4 to 10 is the comeback zone and fine for the first months. 10 to 20 is where most people grow best. Past about 20, extra sets mostly add fatigue. The map at the top of this page shows where each muscle stands over the last 7 days."},
+ {t:"Why full body, and why a round of four?",b:"A muscle grows best when it is trained two or three times a week, not once. So every workout has a leg lift, a push and a pull, and takes about 45 minutes. The emphasis alternates: front of the legs, chest and lats one day; back of the legs, shoulders and upper back the next. The four workouts are done in order whenever you train, so a missed day never breaks the plan."},
+ {t:"Why the main lifts repeat",b:"You get better at a lift by practising it, and you can only see progress if you repeat it. So each main lift comes back every second workout. The two smaller finishers at the end rotate, which keeps the workouts from feeling the same. About every six rounds the app offers a refresh: new finishers and one main lift swapped for a close cousin."},
+ {t:"Warm-up vs stretching",b:"Before lifting: 5 minutes of easy cardio, then moving stretches (swings, circles, light reps). Long static holds before lifting don't help and can make you slightly weaker. After the session: static holds of 30 to 45 seconds for the muscles you trained."},
+ {t:"When to add weight",b:"Each exercise has a rep range, like 8 to 12. Keep the weight the same and add reps each session. When every set hits the top of the range with good form, add the smallest jump next time and start back at the bottom of the range. This is called double progression. The app tells you which case you're in."},
+ {t:"Rest between sets",b:"About 2 minutes for big lifts (presses, rows, leg press, deadlifts). 60 to 90 seconds for small ones (curls, raises). Short rests feel productive but cost you reps on the next set. The timer starts each time you log a set."},
  {t:"Good pain, bad pain",b:"Burning in the muscle and next-day soreness are normal. Sharp, pinching or joint pain is not: stop that exercise, try the listed swap, and tell your trainer."},
- {t:"The phases",b:"Weeks 1–2: ease back in with 2 sets per exercise at RIR 3–4. Weeks 3–6: build with 3 sets at RIR 1–3. Week 7: a lighter deload week to recover, then the build repeats."}
+ {t:"Easing in, building, and lighter workouts",b:"Your first four workouts ease in: 2 sets per exercise, stopping with 3 or 4 reps left. After that you build: 3 sets on the main lifts, 2 on the finishers, stopping with 1 to 3 left. After every 14 building workouts the app gives you two lighter ones (trainers call this a deload) so joints and tendons catch up with the muscles."}
 ];
 
 /* ---------- helpers ---------- */
@@ -335,17 +349,16 @@ const cloudOK = () => !!(Store.state.configured && Store.session);
 try{ S.view = localStorage.getItem("cr_view") || "today"; }catch(e){}
 if(!["today","learn","progress"].includes(S.view)) S.view="today";
 
-function phaseFor(week){
-  if(week<=2) return {key:"ease",name:"Ease back in",sets:2,rir:"3–4",note:"Leave 3–4 reps in the tank. You're rebuilding the habit and the joints, not testing yourself."};
-  const k=(week-3)%5;
-  if(k===4) return {key:"deload",name:"Deload week",sets:2,rir:"4",note:"Same exercises, about 10% lighter, 2 sets. Recovery week: you'll come back stronger."};
-  return {key:"build",name:"Build",sets:3,rir:"1–3",note:"Most sets should end with 1–3 reps left. Chase the targets each session."};
+/* Phases are counted in workouts done, not calendar weeks: he trains when he can.
+   n = workouts finished so far. First 4 ease in; then 14 building workouts, 2 lighter ones, repeat. */
+function phaseFor(n){
+  if(n<4) return {key:"ease",name:"Easing in",sets:2,rir:"3–4",note:"Leave 3 or 4 reps in the tank. You're rebuilding the habit and the joints, not testing yourself."};
+  const k=(n-4)%16;
+  if(k>=14) return {key:"deload",name:"Lighter workout",sets:2,rir:"4",note:"Same exercises, about 10% lighter, 2 sets. Two easy workouts so your joints catch up: you'll come back stronger."};
+  return {key:"build",name:"Building",sets:3,rir:"1–3",note:"Most sets should end with 1 to 3 reps left. Chase the targets each session."};
 }
-function currentWeek(){
-  const start=S.settings?.programStart;
-  if(!start) return 1;
-  return Math.max(1,Math.floor(daysBetween(start,todayISO())/7)+1);
-}
+/* kept under its old name because the whole app calls it: now "workouts finished so far" */
+function currentWeek(){ return S.workouts.filter(w=>w.status==="done").length; }
 const doneWorkouts = () => S.workouts.filter(w=>w.status==="done").sort((a,b)=>(b.date+(b.finishedAt||"")).localeCompare(a.date+(a.finishedAt||"")));
 /* ---------- my gym ---------- */
 const gymSet = () => { const q=S.settings?.equipment; return Array.isArray(q)?new Set(q):null; }; // null = assume everything
@@ -416,9 +429,10 @@ function freeName(w){
 const histName = w => (w.dayId==="free"?(w.dayName||"Free session"):(dayById(w.dayId)?.name||w.dayName||"Workout"))+(w.where==="home"?" · at home":"");
 const usingCustom = () => !!S.settings?.useCustom && customDays().some(d=>d.ex.length);
 const planDays = () => usingCustom()?customDays().filter(d=>d.ex.length):DAYS.map(homeDay);
-const dayTag = d => d?.custom?"My workout":`Day ${d?.id}`;
-const setsFor = (d,id,ph) => (d.custom&&+d.sets?.[id]>0)?+d.sets[id]:ph.sets;
-const wLabel = w => { if(w.dayId==="free") return w.dayName||"Free session"; const d=dayById(w.dayId); return d?(d.custom?d.name:`Day ${d.id}`):(w.dayName||"Workout"); };
+const dayTag = d => d?.custom?"My workout":`Workout ${d?.id} of ${ROUND_LEN}`;
+/* built-in days: the first three are main lifts (the phase's sets), the rest are finishers (2 at most) */
+const setsFor = (d,id,ph) => (d.custom&&+d.sets?.[id]>0)?+d.sets[id]:(!d.custom&&d.ex.indexOf(id)>=MAIN_LIFTS?Math.min(2,ph.sets):ph.sets);
+const wLabel = w => { if(w.dayId==="free") return w.dayName||"Free session"; const d=dayById(w.dayId); return d?d.name:(w.dayName||"Workout"); };
 /* the day as it's actually being done: uses the swapped list saved on the workout */
 function sessionDay(w){
   if(w.dayId==="free"){ const ex=(w.exList||[]).filter(id=>EX[id]); return {...freeDay(),name:w.dayName||"Free session",ex,warm:ownWarm(w.plan),cool:ex.length?warmCoolFor(ex).cool:GENERIC_COOL}; }
@@ -518,25 +532,32 @@ function fillFor(v){
   if(v==="plan") return "var(--m-plan)";
   if(!v) return "var(--m-idle)";
   const pct=Math.round(30+70*Math.min(1,v));
-  return `color-mix(in srgb, var(--accent) ${pct}%, var(--m-idle))`;
+  return `color-mix(in srgb, var(--muscle) ${pct}%, var(--muscle-pale))`;
 }
-function bodyFig(levels,{tap=false,cls=""}={}){
-  const L=slugLevels(levels);
-  const side=(key,vb,lv)=>{
-    const parts=Object.entries(BODY[key]).map(([slug,ps])=>{
-      if(slug==="hair") return "";
+/* The figure: skin-toned body (no hair), each muscle drawn as its own shape with a thin gap around it,
+   a soft shadow under the feet. `sel` (our muscle keys) outlines those muscles in ink.
+   settings.figure picks the male or female drawing (Body tab). */
+const figKind = () => S.settings?.figure==="female"?"female":"male";
+function bodyFig(levels,{tap=false,cls="",sel=[]}={}){
+  const L=slugLevels(levels), selSl={f:new Set(),b:new Set()};
+  sel.forEach(k=>{ (SLUG[k]?.f||[]).forEach(x=>selSl.f.add(x)); (SLUG[k]?.b||[]).forEach(x=>selSl.b.add(x)); });
+  const fem=figKind()==="female", B=fem?BODY_F:BODY;
+  const side=(key,vb0,lv,ss)=>{
+    const vb=fem?B.vb[key]:vb0, [vx,vy,vw,vh]=vb.split(" ").map(Number);
+    const parts=Object.entries(B[key]).map(([slug,ps])=>{
+      if(slug==="hair") return ""; /* no hair on either figure */
       const deco=SKIP.has(slug), v=deco?0:lv[slug];
       const st=deco?'fill="var(--m-skin)"':`style="fill:${fillFor(v)}"`;
-      const on=!deco&&v?` class="lit${v==="hot"?" hot":""}"`:"";
+      const on=[!deco&&v?"lit":"",v==="hot"?"hot":"",ss.has(slug)?"sel":"",deco?"":"mus"].filter(Boolean).join(" ");
       const t=tap&&!deco?` data-act="muscle" data-slug="${slug}" data-side="${key}"`:"";
-      return `<g${on}${t}>${ps.map(d=>`<path d="${d}" ${st}/>`).join("")}</g>`;
+      return `<g class="${on}"${t}>${ps.map(d=>`<path d="${d}" ${st}/>`).join("")}</g>`;
     }).join("");
-    return `<svg class="fig" viewBox="${vb}" aria-hidden="true"><path d="${BODY.outline[key]}" fill="var(--m-skin)" stroke="var(--m-line)" stroke-width="2" vector-effect="non-scaling-stroke"/>${parts}</svg>`;
+    return `<svg class="fig" viewBox="${vb}" aria-hidden="true"><ellipse cx="${vx+vw/2}" cy="${vy+vh-16}" rx="170" ry="13" fill="var(--m-shadow)"/><path d="${B.outline[key]}" fill="var(--m-skin)" stroke="var(--m-line)" stroke-width="2.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>${B[key].head?"":`<ellipse cx="1142" cy="166" rx="66" ry="80" fill="var(--m-skin)" stroke="var(--m-line)" stroke-width="2.5" vector-effect="non-scaling-stroke"/>` /* the female back view has no head shape of its own: draw a plain one */}${parts}</svg>`;
   };
   const names=Object.keys(levels).filter(k=>levels[k]&&levels[k]!=="plan").map(k=>MUSCLES[k]?.n).filter(Boolean);
   return `<div class="figs ${cls}" role="img" aria-label="${esc(names.length?"Highlighted: "+names.join(", "):"Body diagram")}">
-    <div class="figside">${side("front","20 60 684 1380",L.f)}<span>Front</span></div>
-    <div class="figside">${side("back","744 60 684 1380",L.b)}<span>Back</span></div></div>`;
+    <div class="figside">${side("front","20 60 684 1380",L.f,selSl.f)}<span>Front</span></div>
+    <div class="figside">${side("back","744 60 684 1380",L.b,selSl.b)}<span>Back</span></div></div>`;
 }
 const exLevels = id => { const e=EX[id], o={}; e.s.forEach(m=>o[m]=.35); e.m.forEach(m=>o[m]=1); return o; };
 const dayLevels = d => { const o={}; d.ex.forEach(id=>{ EX[id].s.forEach(m=>o[m]=Math.max(o[m]||0,.35)); EX[id].m.forEach(m=>o[m]=1); }); return o; };
@@ -596,65 +617,121 @@ function howTo(id){
 }
 
 /* ---------- home ---------- */
-function weekDots(){
-  const t=new Date(todayISO()+"T12:00:00"), dow=(t.getDay()+6)%7, out=[];
-  const done=new Set(doneWorkouts().map(w=>w.date));
-  for(let i=0;i<7;i++){
-    const d=new Date(t); d.setDate(t.getDate()-dow+i);
-    const iso=new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
-    out.push(`<div class="wd ${done.has(iso)?"done":""} ${i===dow?"today":""}"><i></i><span>${"MTWTFSS"[i]}</span></div>`);
-  }
-  return out.join("");
+/* where he is in the round: no weekdays, no weekly target */
+function roundInfo(){
+  const list=planDays(), ids=list.map(d=>d.id), total=doneWorkouts().filter(w=>ids.includes(w.dayId)).length;
+  const idx=Math.max(0,ids.indexOf(nextDay().id));
+  return {len:list.length,idx,total,round:Math.floor(total/Math.max(1,list.length))+1};
+}
+function roundDots(r){
+  return Array.from({length:r.len},(_,i)=>`<i class="${i<r.idx?"done":i===r.idx?"next":""}"></i>`).join("");
+}
+/* rough length: each set is its rest plus about 45 seconds of work, plus warm-up and stretching */
+function estMins(ids,setsBy){
+  const secs=ids.reduce((a,id)=>a+(setsBy[id]||0)*((EX[id]?.rest||90)+45),0);
+  return Math.max(10,Math.round((secs/60+8+5)/5)*5);
+}
+/* the biggest weight gain on any lift since he first logged it: the one win Home shows */
+function bestWin(){
+  const first={}, last={};
+  doneWorkouts().slice().reverse().forEach(w=>{ const top={};
+    (w.sets||[]).forEach(s=>{ if(s.done&&EX[s.ex]&&+s.w>0) top[s.ex]=Math.max(top[s.ex]||0,+s.w); });
+    Object.entries(top).forEach(([ex,v])=>{ if(!first[ex]) first[ex]={v,date:w.date}; last[ex]={v,date:w.date}; }); });
+  let best=null;
+  Object.keys(first).forEach(ex=>{ const g=last[ex].v-first[ex].v; if(g>0&&last[ex].date!==first[ex].date&&(!best||g>best.gain)) best={ex,gain:g,since:first[ex].date}; });
+  return best;
+}
+const lc1 = t => t.charAt(0).toLowerCase()+t.slice(1);
+const listAnd = a => a.length<=1?(a[0]||""):a.slice(0,-1).join(", ")+" and "+a.at(-1);
+/* "Leg press, dumbbell bench press and lat pulldown, then lateral raise and curl to finish." */
+function movesLine(day,ids){
+  const n=ids.map(id=>EX[id]?.n||"").filter(Boolean); if(!n.length) return "";
+  if(day.custom||n.length<=MAIN_LIFTS){ const show=n.slice(0,4).map((t,i)=>i?lc1(t):t); return n.length>4?show.join(", ")+` and ${n.length-4} more.`:listAnd(show)+"."; }
+  return listAnd(n.slice(0,MAIN_LIFTS).map((t,i)=>i?lc1(t):t))+", then "+listAnd(n.slice(MAIN_LIFTS).map(lc1))+" to finish.";
+}
+/* a refresh is offered after about six rounds on the same block; nothing changes unless he says yes */
+function refreshDue(){
+  if(usingCustom()||S.active) return null;
+  const done=doneWorkouts().filter(w=>DAYS.some(d=>d.id===w.dayId)).length;
+  const since=done-(+S.settings?.blockStart||0);
+  if(since<REFRESH_ROUNDS*ROUND_LEN||nextDay().id!==DAYS[0].id) return null;
+  const cur=BLOCKS[planBlock()], nxt=BLOCKS[(planBlock()+1)%BLOCKS.length], swaps=[], seen=new Set();
+  DAYS.forEach(d=>cur[d.id].forEach((id,i)=>{ const to=nxt[d.id][i]; if(to!==id&&!seen.has(id+to)&&!Object.values(cur).flat().includes(to)){ seen.add(id+to); swaps.push([id,to]); } }));
+  return {done,swaps};
+}
+function refreshCard(){
+  const r=refreshDue(); if(!r) return "";
+  return `<section class="card refresh"><h3>Fancy a refresh?</h3>
+    <p class="small muted">You've done ${Math.floor((r.done-(+S.settings?.blockStart||0))/ROUND_LEN)} rounds of this plan. A small change keeps it interesting without losing your progress. The main lifts mostly stay, so you keep building on them.</p>
+    <ul class="swaps">${r.swaps.map(([a,b])=>`<li><b>${esc(EX[b].n)}</b> <span class="muted">instead of ${esc(lc1(EX[a].n))}</span></li>`).join("")}</ul>
+    <div class="row"><button class="btn primary" data-act="refresh-yes">Refresh the plan</button><button class="btn" data-act="refresh-no">Keep it as is</button></div></section>`;
+}
+function helloLine(r){
+  if(S.active&&S.paused) return "Pick up where you left off.";
+  if(!doneWorkouts().length) return "Let's ease back in.";
+  if(returnState()) return "Good to see you back.";
+  if(r.idx===0&&r.total>0) return "Round done. Fresh start.";
+  return ["Nice and steady today.","One workout at a time.","Showing up is the hard part."][doneWorkouts().length%3];
 }
 function viewToday(){
-  const wk=currentWeek(), ph=phaseFor(wk), day=nextDay(), res=resolveDay(day);
-  const n=doneWorkouts().filter(w=>{const d=daysBetween(w.date,todayISO());return d>=0&&d<7;}).length;
+  const wk=currentWeek(), ph=phaseFor(wk), day=nextDay(), res=resolveDay(day), r=roundInfo();
   const adj=planAdjust(day,res,ph), adjBy=Object.fromEntries(adj.map(a=>[a.ex,a.to]));
   const lrnH=learnAdjust(res.ex,Object.fromEntries(res.ex.map((id,i)=>[id,adjBy[id]??setsFor(day,day.ex[i],ph)])));
-  const nSets=res.ex.reduce((a,id)=>a+lrnH.sets[id],0), nSwap=Object.keys(res.swaps).length;
-  const mins=Math.round(10+nSets*2.6+6);
+  const nSwap=Object.keys(res.swaps).length;
+  const mins=estMins(res.ex,lrnH.sets);
   const can=S.dbState==="on"&&S.canWrite;
-  const date=new Date().toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"long"});
+  const date=new Date().toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"short"});
+  const name=S.settings?.name||"Danny";
   const resume=S.active&&S.paused?`<button class="resume" data-act="resume"><span><b>Workout in progress</b><br><span class="muted">${esc(wLabel(S.active))} · ${(S.active.sets||[]).filter(s=>s.done).length} sets logged</span></span><span class="go">Resume →</span></button><button class="link center" data-act="cancel-session">Discard workout</button>`:"";
+  const win=bestWin(), nDone=doneWorkouts().length;
+  const winTile=win?`<div class="tile pink"><b class="tl">You're stronger</b><b class="tn num">+${fmtKg(win.gain)} kg</b><span>on ${esc(lc1(EX[win.ex].n))} since ${new Date(win.since+"T12:00:00").toLocaleDateString(undefined,{day:"numeric",month:"short"})}</span></div>`
+    :nDone?`<div class="tile pink"><b class="tl">You keep showing up</b><b class="tn num">${nDone}</b><span>${nDone===1?"workout":"workouts"} done so far</span></div>`
+    :`<div class="tile pink"><b class="tl">Start here</b><b class="tn">Day one</b><span>The first workout finds your weights.</span></div>`;
+  const notes=[`<span>${esc(ph.name)}</span>`,nSwap?`<span>${nSwap} swapped for your gym</span>`:"",lrnH.notes.length?`<span class="adj">${lrnH.notes.some(n=>n.k==="return")?"Easing back in":"Tuned to your log"}</span>`:"",adj.length?`<span class="adj">${adj.length} eased for recovery</span>`:""].join("");
   return `${notice()}
-  <header class="top"><div class="spread"><div class="muted small">${esc(date)}</div><div class="row" style="gap:6px"><div class="seg where" role="group" aria-label="Where are you training?"><button class="${atHome()?"":"on"}" data-act="where" data-v="gym" aria-pressed="${!atHome()}">Gym</button><button class="${atHome()?"on":""}" data-act="where" data-v="home" aria-pressed="${atHome()}">Home</button></div>${atHome()?"":`<button class="pill quiet" data-act="gym" aria-label="My gym">${GEAR_I}</button>`}</div></div><h1 class="hello">${n>=3?"Week done. Nice.":n?`${3-n} more this week`:"Let's ease back in"}</h1>
-    <div class="week">${weekDots()}</div></header>
+  <header class="top"><div class="spread"><div class="muted small">${esc(date)}</div><div class="row" style="gap:6px;flex-wrap:nowrap"><div class="seg where" role="group" aria-label="Where are you training?"><button class="${atHome()?"":"on"}" data-act="where" data-v="gym" aria-pressed="${!atHome()}">Gym</button><button class="${atHome()?"on":""}" data-act="where" data-v="home" aria-pressed="${atHome()}">Home</button></div>${atHome()?"":`<button class="pill quiet" data-act="gym" aria-label="My gym">${GEAR_I}</button>`}</div></div>
+    <h1 class="hello">Hey ${esc(name)}.<br>${esc(helloLine(r))}</h1></header>
   ${resume}
-  ${Store.state.configured&&!Store.session?`<button class="health setup" data-act="go-signin"><span><b>Back up your log</b><br><span class="small muted">Sign in once so nothing is lost and Apple Health shows up.</span></span><span class="go">Sign in →</span></button>`:""}
-  ${healthStrip()}
-  ${soreCard()}
+  ${refreshCard()}
   <section class="hero">
-    <div class="hero-top"><div><div class="eyebrow">Next workout · ${esc(dayTag(day))}${day.home?" · at home":""}</div><h2 class="big">${esc(day.name)}</h2></div><div class="mins"><b>${mins}</b><span>min</span></div></div>
-    <div class="hero-fig">${bodyFig(intensityLevels(setsPerMuscle(res.ex.map((id,i)=>[id,adjBy[id]??setsFor(day,day.ex[i],ph)]))))}</div>
-    ${intensityKey()}
-    <div class="hero-meta"><span>${res.ex.length} exercises</span><span>${day.custom||adj.length?nSets+" sets":ph.sets+" sets each"}</span><span>${esc(ph.name)}</span>${nSwap?`<span>${nSwap} swapped for your gym</span>`:""}${lrnH.notes.length?`<span class="adj">${lrnH.notes.some(n=>n.k==="return")?"Easing back in":"Tuned to your log"}</span>`:""}${adj.length?`<span class="adj">${adj.length} adjusted for this week</span>`:""}</div>
-    ${S.active&&S.paused?"":`<button class="btn primary xl block" data-act="start" data-day="${esc(day.id)}" ${can?"":"disabled"}>Start workout</button>`}
-    <button class="link" data-act="pick-day">See the exercises or pick another day</button>
+    <div class="hero-top"><div><div class="eyebrow">${esc(dayTag(day))}${day.home?" · at home":""}</div><h2 class="big">${esc(day.custom?day.name:"Full body")}</h2><div class="hero-sub">${res.ex.length} ${res.ex.length===1?"move":"moves"} · about ${mins} minutes</div></div></div>
+    <p class="hero-list">${esc(movesLine(day,res.ex))}</p>
+    ${S.active&&S.paused?"":`<button class="btn primary xl block" data-act="start" data-day="${esc(day.id)}" ${can?"":"disabled"}>Let's go</button>`}
+    <div class="hero-fig">${bodyFig(intensityLevels(setsPerMuscle(res.ex.map((id,i)=>[id,adjBy[id]??setsFor(day,day.ex[i],ph)]))))}${intensityKey()}</div>
+    <div class="hero-meta">${notes}</div>
+    <button class="link" data-act="pick-day">See the exercises or pick another workout</button>
   </section>
+  <div class="tiles">
+    <div class="tile mint"><b class="tl">${usingCustom()?"Your rotation":"Round "+r.round}</b><div class="rdots">${roundDots(r)}</div><span>${r.idx?`${r.idx} down, ${r.len-r.idx} to go.`:"A fresh round."} No deadline.</span></div>
+    ${winTile}
+  </div>
+  ${soreCard()}
   ${S.active&&S.paused?"":ownCard(can)}
-  <button class="health setup" data-act="tab" data-v="learn"><span><b>Your body · last 7 days</b><br><span class="small muted">${esc((()=>{ const ins=bodyInsight(muscleStatus({noActive:true})); return ins.needs.length?"Needs work: "+mNames(ins.needs.slice(0,3)):ins.rec.length?"Recovering: "+mNames(ins.rec.slice(0,3)):"See what's been worked"; })())}</span></span><span class="go">See →</span></button>
-  <section class="tip"><div class="eyebrow">This phase</div><p>${esc(ph.note)}</p></section>`;
+  <button class="health setup" data-act="tab" data-v="learn"><span><b>Your body · last 7 days</b><br><span class="small muted">${esc((()=>{ const ins=bodyInsight(muscleStatus({noActive:true})); return ins.needs.length?"Could use more: "+mNames(ins.needs.slice(0,3)):ins.rec.length?"Recovering: "+mNames(ins.rec.slice(0,3)):"See what's been worked"; })())}</span></span><span class="go">See →</span></button>
+  ${healthStrip()}
+  ${Store.state.configured&&!Store.session?`<button class="health setup" data-act="go-signin"><span><b>Back up your log</b><br><span class="small muted">Sign in once so nothing is lost and Apple Health shows up.</span></span><span class="go">Sign in →</span></button>`:""}
+  <section class="tip"><div class="eyebrow">Right now: ${esc(ph.name.toLowerCase())}</div><p>${esc(ph.note)}</p></section>`;
 }
 function dayCard(d,ph,can,nid){
   const res=resolveDay(d);
   const rows=res.ex.map((id,i)=>{ const e=EX[id], orig=d.ex[i];
     const tag=res.swaps[id]?`<em class="swp">instead of ${esc(EX[orig].n)}</em>`:res.missing.includes(id)?`<em class="swp miss">Needs ${esc(missingGear(id).join(", "))}</em>`:"";
-    return `<button data-act="ex-info" data-ex="${esc(id)}"><span class="exn">${esc(e.n)}${tag}</span><span>${setsFor(d,orig,ph)}×${e.r[0]}–${e.r[1]}${e.timed?"s":""}</span></button>`; }).join("");
+    return `<button data-act="ex-info" data-ex="${esc(id)}"><span class="exn">${esc(e.n)}${tag}</span><span>${setsFor(d,orig,ph)} sets of ${e.r[0]}–${e.r[1]}${e.timed?"s":""}</span></button>`; }).join("");
   const primary=d.id===nid?"primary":"";
   const acts=d.custom
     ?`<div class="dayacts"><button class="btn ${primary}" data-act="start" data-day="${esc(d.id)}" ${can&&d.ex.length?"":"disabled"}>Start</button><button class="pill" data-act="cd-edit" data-id="${esc(d.id)}">Edit</button><button class="pill quiet" data-act="cd-del" data-id="${esc(d.id)}">Delete</button></div>`
-    :`<button class="btn ${primary} block" data-act="start" data-day="${d.id}" ${can?"":"disabled"}>Start Day ${d.id}</button>`;
+    :`<button class="btn ${primary} block" data-act="start" data-day="${d.id}" ${can?"":"disabled"}>Start</button>`;
   return `<div class="daypick"><div class="daypick-fig">${bodyFig(dayLevels({ex:res.ex}),{cls:"mini"})}</div><div class="daypick-main">
       <div class="eyebrow">${esc(dayTag(d))}</div><h3>${esc(d.name)}</h3>
       <div class="exlist">${rows||`<p class="small muted">No exercises yet.</p>`}</div>${acts}</div></div>`;
 }
 function pickDaySheet(){
   const ph=phaseFor(currentWeek()), can=S.dbState==="on"&&S.canWrite&&!S.active, nid=nextDay().id, cds=customDays(), uc=usingCustom();
-  const plan=`<div class="stack-l"><div><h3>The plan</h3><p class="muted small">3 days. Do them in order through the week.</p></div>${DAYS.map(d=>dayCard(d,ph,can,nid)).join("")}</div>`;
+  const plan=`<div class="stack-l"><div><h3>The plan</h3><p class="muted small">A round of four full-body workouts. Do them in order, whenever you train. The first three moves are the main lifts; the last two are finishers.</p></div>${DAYS.map(d=>dayCard(d,ph,can,nid)).join("")}</div>`;
   const mine=`<div class="stack-l"><div><h3>My workouts</h3><p class="muted small">${cds.length?"Workouts you made yourself.":"Make your own from any exercises. Handy if your trainer gave you a plan."}</p></div>
     ${cds.map(d=>dayCard(d,ph,can,nid)).join("")}
     <button class="btn block" data-act="cd-new">+ Create a workout</button>
-    ${cds.length?`<button class="tick toggle ${uc?"on":""}" data-act="use-custom"><span class="box"></span><span class="tt"><span>Use my own workouts as the plan</span><small>Home rotates through these instead of Days A, B and C.</small></span></button>`:""}</div>`;
+    ${cds.length?`<button class="tick toggle ${uc?"on":""}" data-act="use-custom"><span class="box"></span><span class="tt"><span>Use my own workouts as the plan</span><small>Home rotates through these instead of the four full-body workouts.</small></span></button>`:""}</div>`;
   openSheet(`<div class="stack-l"><div class="spread"><h2>Your workouts</h2><button class="pill" data-act="gym" data-from="pick">${GEAR_I}My gym</button></div>
     <p class="muted small">Tap an exercise to learn it.</p>
     ${uc?mine+plan:plan+mine}
@@ -754,7 +831,7 @@ function viewSession(){
   const total=day.ex.length+2, cur=S.step===0?0:S.step===1?1+S.exIdx:S.step===2?total-1:total;
   const exDone=x=>{const ss=w.sets.filter(s=>s.ex===x);return ss.length&&ss.every(s=>s.done);};
   const segs=[`<i class="${S.step>0?"done":S.step===0?"cur":""}"></i>`,...day.ex.map((x,i)=>`<i class="${exDone(x)?"done":""} ${S.step===1&&S.exIdx===i?"cur":""}"></i>`),`<i class="${S.step>2?"done":S.step===2?"cur":""}"></i>`].join("");
-  const bar=`<div class="sbar"><button class="icon" data-act="pause" aria-label="Pause and go home">✕</button><button class="segs" data-act="session-list" aria-label="Exercise list: jump, reorder or remove">${segs}</button><button class="pill quiet num" data-act="session-list">${Math.min(cur+1,total)}/${total} ☰</button></div>`;
+  const bar=`<div class="sbar"><button class="icon" data-act="pause" aria-label="Pause and go home">✕</button><button class="segs" data-act="session-list" aria-label="Exercise list: jump, reorder or remove">${segs}</button><button class="pill quiet num" data-act="session-list">${Math.min(cur+1,total)} of ${total} ☰</button></div>`;
   let body="";
   if(S.step===0) body=warmView(day);
   else if(S.step===1) body=day.ex.length?liftView(day,Math.min(S.exIdx,day.ex.length-1)):emptyLiftView();
@@ -842,17 +919,31 @@ function sessionLevels(w){
   day.ex.forEach(id=>{ const e=EX[id]; if(!e) return; [...e.m,...e.s].forEach(m=>{ if(!lv[m]) lv[m]="plan"; }); });
   return lv;
 }
+/* what went better than last time: the celebration leads with this */
+function sessionWins(w){
+  const done=(w.sets||[]).filter(s=>s.done), ids=[...new Set(done.map(s=>s.ex))].filter(id=>EX[id]), up=[]; let first=0;
+  ids.forEach(id=>{ const e=EX[id], ss=done.filter(s=>s.ex===id), last=lastSetsFor(id,w.id);
+    if(!last){ first++; return; }
+    const top=x=>Math.max(...x.map(s=>+s.w||0)), reps=x=>x.reduce((a,s)=>a+(+s.r||0),0), best=x=>Math.max(...x.map(s=>+s.r||0));
+    if(e.inc===0?best(ss)>best(last.sets):(top(ss)>top(last.sets)||(top(ss)===top(last.sets)&&reps(ss)>reps(last.sets)))) up.push(id); });
+  return {up,first,n:ids.length};
+}
 function finishView(day){
   const w=S.active, done=(w.sets||[]).filter(s=>s.done);
   const mins=Math.max(1,Math.round((Date.now()-new Date(w.startedAt).getTime())/6e4));
-  const lv=sessionLevels(w);
-  return `<section class="stage center"><div class="eyebrow">Workout complete</div><h1 class="title">Nice work. You showed up.</h1></section>
-    <div class="facts"><div><b>${mins}</b><span>minutes</span></div><div><b>${done.length}</b><span>sets</span></div><div><b>${new Set(done.map(s=>s.ex)).size}</b><span>exercises</span></div></div>
-    ${(()=>{ const h=sessionHR(w,Date.now()); return h?`<div class="hrline"><span class="heart">♥</span><span>Heart rate <b class="num">avg ${h.avg}</b> <span class="muted">·</span> <b class="num">peak ${h.max}</b> <span class="muted small">bpm</span></span></div>`:`<p class="small muted">Heart rate from your watch appears here after the next sync.</p>`; })()}
-    <div class="figcard">${bodyFig(sessionGrad(w))}${sessionKey()}${sessionLine(w)}<div class="small muted center">What you trained today</div></div>
+  const wins=sessionWins(w), list=planDays(), pi=list.findIndex(d=>d.id===w.dayId), lastOfRound=pi>=0&&pi===list.length-1;
+  const head=wins.up.length?`${wins.up.length} ${wins.up.length===1?"lift":"lifts"} went up today.`:wins.n&&wins.first===wins.n?"First one in the book.":"You showed up. That counts.";
+  const sub=wins.up.length?`${listAnd(wins.up.slice(0,3).map((id,i)=>i?lc1(EX[id].n):EX[id].n))}${wins.up.length>3?` and ${wins.up.length-3} more`:""}: more weight or more reps than last time.`
+    :wins.n&&wins.first===wins.n?"These are your starting numbers. Every workout from here builds on them."
+    :"Matching last time is still a win. Turning up again and again is what builds strength.";
+  return `<section class="cele"><div class="eyebrow">${pi>=0&&!day.custom?`Workout ${pi+1} of ${list.length} done`:"Workout done"}${lastOfRound?" · round finished":""}</div>
+      <h1 class="title">${esc(head)}</h1><p>${esc(sub)}</p>
+      <div class="cele-stats"><div><b class="num">${mins}</b><span>${mins===1?"minute":"minutes"}</span></div><div><b class="num">${done.length}</b><span>${done.length===1?"set":"sets"}</span></div><div><b class="num">${new Set(done.map(s=>s.ex)).size}</b><span>${new Set(done.map(s=>s.ex)).size===1?"move":"moves"}</span></div></div></section>
+    ${(()=>{ const h=sessionHR(w,Date.now()); return h?`<div class="hrline"><span class="heart">♥</span><span>Heart rate <b class="num">avg ${h.avg}</b> <span class="muted">·</span> <b class="num">peak ${h.max}</b> <span class="muted small">bpm</span></span></div>`:""; })()}
+    <div class="figcard"><h3>What you trained today</h3>${bodyFig(sessionGrad(w))}${sessionKey()}${sessionLine(w)}</div>
     ${postBrief(w)}
     <section class="card"><h3>How was it overall?</h3>
-      <div class="feel">${[[4,"Easy"],[7,"Just right"],[9,"Brutal"]].map(([v,l])=>`<button class="${w.rpe===v?"on":""}" data-act="rpe" data-v="${v}"><b>${l}</b></button>`).join("")}</div></section>
+      <div class="feel overall">${[[4,"Easy"],[7,"Just right"],[9,"Brutal"]].map(([v,l])=>`<button class="${w.rpe===v?"on":""}" data-act="rpe" data-v="${v}"><b>${l}</b></button>`).join("")}</div></section>
     <details class="card"><summary>Add watch data or a note</summary>
       <div class="stack-l" style="margin-top:12px"><div class="grid2"><label class="f" for="f-hr">Avg heart rate<input id="f-hr" inputmode="numeric" value="${esc(w.avgHr??"")}" data-act="field" data-k="avgHr" placeholder="bpm"></label>
       <label class="f" for="f-kcal">Calories<input id="f-kcal" inputmode="numeric" value="${esc(w.kcal??"")}" data-act="field" data-k="kcal" placeholder="kcal"></label></div>
@@ -885,7 +976,7 @@ function loggerHTML(day,idx){
   const qw=bw?[]:recentWeights(id);
   const logger=cur?`<section class="logger">
       <div class="spread"><div class="setlabel">Set ${ci+1} <span class="muted">of ${sets.length}</span></div><div class="setpips">${pips}</div></div>
-      ${mates.length?`<div class="hint grp">⇄ Superset with ${esc(mates.join(" + "))} · no rest in between</div>`:""}
+      ${mates.length?`<div class="hint grp">Superset with ${esc(mates.join(" + "))} · no rest in between</div>`:""}
       ${S.hint?`<div class="hint">${esc(S.hint)}</div>`:""}
       <div class="steppers ${bw?"one":""}">
         ${bw?"":stepper(cur,"w",ph?"kg each hand":"kg")}
@@ -894,8 +985,8 @@ function loggerHTML(day,idx){
       ${ph&&+cur.w>0?`<p class="tiny muted center" style="margin-top:-6px">Each hand ${fmtKg(cur.w)} kg · <b class="num" id="tot-${cur.k}">${fmtKg(cur.w*2)} kg</b> total</p>`:""}
       ${qw.length?`<div class="row center quickw">${qw.map(v=>`<button class="pill ${+cur.w===v?"on":""}" data-act="setw" data-k="${cur.k}" data-v="${v}">${fmtKg(v)} kg</button>`).join("")}<button class="pill quiet" data-act="wstep" data-ex="${id}" aria-label="Change weight step">± ${wStep(id)}</button></div>`
         :bw?"":`<div class="row center"><button class="pill quiet" data-act="wstep" data-ex="${id}">Steps of ${wStep(id)} kg · change</button></div>`}
-      <div class="q">Done the set? Tap how it felt to log it</div>
-      <div class="feel">${FEEL.map(f=>`<button data-act="log" data-k="${cur.k}" data-feel="${f.k}" class="f-${f.k}"><b>✓ ${f.n}</b><span>${f.d}</span></button>`).join("")}</div>
+      <div class="q">Done the set? Tap how it felt to log it.</div>
+      <div class="feel">${FEEL.map(f=>`<button data-act="log" data-k="${cur.k}" data-feel="${f.k}" class="f-${f.k}"><b>${f.n}</b><span>${f.d}</span></button>`).join("")}</div>
       <div class="row center"><button class="link" data-act="add-set" data-ex="${id}">+ Add a set</button>${sets.length>1?`<button class="link" data-act="del-set" data-ex="${id}">Remove a set</button>`:""}</div>
     </section>`
     :`<section class="logger done"><div class="setlabel">All ${sets.length} sets done ✓</div>
@@ -912,7 +1003,7 @@ function liftView(day,idx){
   const w=S.active, id=day.ex[idx], e=EX[id], t=targetFor(id), free=w.dayId==="free";
   const isLast=idx===day.ex.length-1, firstTime=!lastSetsFor(id,w.id);
   const open=S.howOpen[id]??firstTime;
-  return `<section class="exhead"><div class="eyebrow">Exercise ${idx+1} of ${day.ex.length}${e.eq?` · ${esc(e.eq)}`:""}</div><h1 class="title">${esc(e.n)}</h1>
+  return `<section class="exhead"><div class="eyebrow">Move ${idx+1} of ${day.ex.length}${e.eq?` · ${esc(e.eq)}`:""}</div><h1 class="title">${esc(e.n)}</h1>
       <div class="target"><span class="tl">Today</span><b>${esc(t.short)}</b>${t.up?`<span class="up">↑ level up</span>`:""}</div>
       <p class="muted small">${esc(t.text)}</p>
       ${lastTimeLine(id)}
@@ -946,12 +1037,12 @@ function sessionListSheet(){
   const rows=ex.map((id,i)=>{ const e=EX[id], ss=w.sets.filter(s=>s.ex===id), d=ss.filter(s=>s.done).length, gi=gs.findIndex(g=>g.includes(id));
     const paired=i<ex.length-1&&gi>=0&&gs[gi].includes(ex[i+1]);
     return `<div class="srow ${S.step===1&&S.exIdx===i?"cur":""} ${d&&d===ss.length?"done":""}">
-      <button class="sname" data-act="goto" data-i="${i}" data-close="1"><span class="sn num">${i+1}</span><span class="exn">${esc(e.n)}${gi>=0?`<em class="swp">⇄ Superset ${gi+1}</em>`:""}</span><span class="num muted small">${d}/${ss.length}</span></button>
-      <div class="sctl"><button class="icon sm" data-act="s-move" data-i="${i}" data-d="-1" ${i?"":"disabled"} aria-label="Move up">↑</button><button class="icon sm" data-act="s-move" data-i="${i}" data-d="1" ${i<ex.length-1?"":"disabled"} aria-label="Move down">↓</button><button class="icon sm ${paired?"on":""}" data-act="s-pair" data-i="${i}" ${i<ex.length-1?"":"disabled"} aria-label="${paired?"Unpair from next":"Superset with next"}" title="Superset with the next exercise">⇄</button><button class="icon sm" data-act="s-rm" data-i="${i}" aria-label="Remove ${esc(e.n)}">×</button></div></div>`; }).join("");
+      <button class="sname" data-act="goto" data-i="${i}" data-close="1"><span class="sn num">${i+1}</span><span class="exn">${esc(e.n)}${gi>=0?`<em class="swp">Superset ${gi+1}</em>`:""}</span><span class="num muted small">${d}/${ss.length}</span></button>
+      <div class="sctl"><button class="icon sm" data-act="s-move" data-i="${i}" data-d="-1" ${i?"":"disabled"} aria-label="Move up">↑</button><button class="icon sm" data-act="s-move" data-i="${i}" data-d="1" ${i<ex.length-1?"":"disabled"} aria-label="Move down">↓</button><button class="icon sm ${paired?"on":""}" data-act="s-pair" data-i="${i}" ${i<ex.length-1?"":"disabled"} aria-label="${paired?"Unpair from next":"Superset with next"}" title="Superset with the next exercise"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg></button><button class="icon sm" data-act="s-rm" data-i="${i}" aria-label="Remove ${esc(e.n)}">×</button></div></div>`; }).join("");
   openSheet(`<div class="stack-l"><div><div class="eyebrow">${esc(wLabel(w))}</div><h2>Today's exercises</h2></div>
     <div class="figcard"><div class="livemap">${bodyFig(sessionGrad(w,true),{cls:"mini"})}</div>${sessionKey(true)}${sessionLine(w)}</div>
     <div class="slist">${rows||`<p class="small muted">Nothing added yet.</p>`}</div>
-    <p class="tiny muted">Tap a name to jump to it. ⇄ pairs it with the next one as a superset: you alternate sets and rest after each round.</p>
+    <p class="tiny muted">Tap a name to jump to it. The chain button pairs it with the next one as a superset: you alternate sets and rest after each pair.</p>
     <button class="btn block" data-act="add-ex">+ Add exercise</button>
     <div class="row"><button class="link" data-act="step" data-i="0" data-close="1">Warm-up</button><button class="link" data-act="step" data-i="2" data-close="1">Stretch</button></div>
     <button class="btn ghost block" data-act="close-sheet">Close</button></div>`);
@@ -981,12 +1072,56 @@ function stepper(s,f,label){
     <input id="s-${s.k}-${f}" inputmode="decimal" value="${esc(s[f])}" placeholder="0" data-act="set" data-k="${s.k}" data-f="${f}" aria-label="${label}">
     <button data-act="nudge" data-k="${s.k}" data-f="${f}" data-d="1" aria-label="Increase ${label}">+</button></div><span class="lbl">${esc(label)}</span></div>`;
 }
-const FEEL=[{k:"easy",n:"Easy",d:"could do 4+ more",rir:"4"},{k:"good",n:"Good",d:"2–3 left",rir:"2"},{k:"tough",n:"Tough",d:"barely made it",rir:"0"}];
+const FEEL=[{k:"easy",n:"Easy",d:"4+ reps left",rir:"4"},{k:"good",n:"Good",d:"2–3 left",rir:"2"},{k:"tough",n:"Tough",d:"0–1 left",rir:"0"}];
 
 /* ---------- body (learn) ---------- */
+/* ---------- get to know your muscles ----------
+   Plain words first, the proper name second. Shown from the Body tab. */
+const MUSCLE_INFO={
+ chest:{aka:"Pectorals, or pecs",where:"The front of your upper body, from the breastbone out to each shoulder.",does:"Pushes things away from you and brings your arms together in front of you.",life:"Pushing a heavy door, getting up off the floor, pushing a trolley.",feel:"A stretch across the chest at the bottom of a press and a squeeze in the middle at the top.",tip:"If your shoulders ache more than your chest, pull your shoulder blades back and down before you press, and keep the elbows a little tucked."},
+ shoulders:{aka:"Deltoids, or delts (front and side)",where:"The rounded cap on top of each arm.",does:"Lifts your arms forward, out to the side and overhead.",life:"Putting a bag in an overhead locker, reaching a high shelf.",feel:"A burn on the outside of the upper arm, just below the shoulder bone.",tip:"They are small, so light weights and clean reps beat heavy swinging. The front already gets work from every press, which is why side raises matter most."},
+ rear_delts:{aka:"Rear deltoids",where:"The back of the shoulder.",does:"Pulls your arms back and opens up the chest.",life:"Sitting and standing tall, pulling a drawer open.",feel:"A small burn at the back of the shoulder, not in the neck.",tip:"Often neglected. Keeping them strong balances all the pressing and keeps shoulders comfortable."},
+ triceps:{aka:"Triceps",where:"The back of the upper arm. It is about two thirds of the arm's size.",does:"Straightens the elbow.",life:"Pushing yourself up out of a chair, and anything you push.",feel:"The back of the arm tightening as the elbow locks out.",tip:"Every press trains them too. On pushdowns keep the elbows still at your sides so the triceps do the work, not the shoulders."},
+ biceps:{aka:"Biceps",where:"The front of the upper arm.",does:"Bends the elbow and turns the palm up.",life:"Carrying shopping, lifting a child.",feel:"The front of the arm squeezing at the top of a curl.",tip:"Every pull and row trains them too. If you have to swing or the elbows drift forward, the weight is too heavy."},
+ lats:{aka:"Latissimus dorsi",where:"The big wing-shaped muscles down the sides of your back, from armpit to waist.",does:"Pulls your arms down and back toward your body.",life:"Pulling yourself up, opening a heavy door toward you, swimming.",feel:"Under the armpits and down the sides of the back.",tip:"Think \"elbows to back pockets\" instead of pulling with your hands. That moves the work from the arms to the lats."},
+ upper_back:{aka:"Trapezius and rhomboids",where:"Between and above the shoulder blades, up to the neck.",does:"Pulls the shoulder blades together and holds your shoulders back.",life:"Standing tall, carrying bags without slumping.",feel:"A squeeze between the shoulder blades at the end of a row.",tip:"Pause for a second with the blades squeezed together. If you only feel your arms, lighten the weight."},
+ lower_back:{aka:"Spinal erectors",where:"The two columns of muscle either side of the spine, above the hips.",does:"Keeps your spine upright and steady while you bend and lift.",life:"Picking something up from the floor, standing for a long time.",feel:"A steady, working tightness. Never a sharp or pinching pain.",tip:"It works in every deadlift and row just to hold you still. Build it gradually, and stop if the pain is sharp."},
+ abs:{aka:"Abdominals and obliques, or core",where:"The front and sides of your stomach.",does:"Braces your middle so force passes between legs and arms, and stops you twisting or arching when you don't want to.",life:"Getting out of bed, carrying something heavy on one side.",feel:"The stomach tightening as if bracing for a poke.",tip:"Their main job is to resist movement, which is why planks and dead bugs are in the plan. Don't let the lower back arch."},
+ quads:{aka:"Quadriceps",where:"The front of the thigh. Four muscles, hence the name.",does:"Straightens the knee.",life:"Standing up from a chair, climbing stairs.",feel:"The front of the thigh burning as you push.",tip:"Go as deep as is comfortable: the more the knee bends, the more the quads work. Knees moving forward over the toes is fine."},
+ hamstrings:{aka:"Hamstrings",where:"The back of the thigh.",does:"Bends the knee and, together with the glutes, straightens the hip.",life:"Walking, running, bending down to pick something up.",feel:"A stretch down the back of the thigh on deadlifts, a squeeze on curls.",tip:"On Romanian deadlifts push your hips back as if closing a car door with your bottom. The stretch is the point."},
+ glutes:{aka:"Gluteals",where:"Your bottom. The largest muscle group in the body.",does:"Straightens the hip: it drives you up from a squat and forward when you walk.",life:"Climbing stairs, getting up, straightening from a bend.",feel:"A hard squeeze at the top of a hip thrust or bridge.",tip:"Pause and squeeze at the top. If you feel your lower back instead, tuck the ribs down and shorten the movement."},
+ calves:{aka:"Gastrocnemius and soleus",where:"The back of the lower leg.",does:"Points the foot and pushes you up onto your toes.",life:"Walking, stairs, balance.",feel:"A deep stretch at the bottom and a burn at the top.",tip:"Slow and full: pause in the bottom stretch, then rise as high as you can. Bouncing lets the tendon do the work."}
+};
+function muscleSheet(k){
+  const m=MUSCLES[k], info=MUSCLE_INFO[k]; if(!m||!info) return;
+  const st=muscleStatus().mus[k], inPlan=new Set(planDays().flatMap(d=>resolveDay(d).ex));
+  const all=Object.entries(EX).filter(([id,e])=>!e.placeholder&&(!!e.home===atHome()||inPlan.has(id)));
+  const row=(id,e,tag)=>`<button data-act="ex-info" data-ex="${esc(id)}">${esc(e.n)}<span>${tag}</span></button>`;
+  const main=all.filter(([id,e])=>e.m.includes(k)).sort((a,b)=>inPlan.has(b[0])-inPlan.has(a[0])).slice(0,7);
+  const help=all.filter(([id,e])=>e.s.includes(k)&&inPlan.has(id)).slice(0,4);
+  const str=(STRETCHES[k]||[]).map(([lib,n,per])=>`<button class="swaprow" data-act="photo-zoom" data-lib="${esc(lib)}" data-i="1"><img src="${photoSrc(lib,1)}" alt="" loading="lazy" onerror="phErr(this)"><span class="tt"><b>${esc(n)}</b><small>${per?esc(per)+" · ":""}hold 30–45 seconds</small></span><span class="chev">›</span></button>`).join("");
+  const ago=!st||st.last==null?"Not trained in the last 7 days.":st.last<1?"Last trained today.":st.last<2?"Last trained yesterday.":`Last trained ${Math.round(st.last)} days ago.`;
+  const fact=(t,b)=>`<div class="mfact"><b>${t}</b><p>${esc(b)}</p></div>`;
+  openSheet(`<div class="stack-l mguide">
+    <div><div class="eyebrow">${esc(GROUPS[m.g]?.n||"")} muscle</div><h2>${esc(m.n)}</h2><p class="muted">Also called: ${esc(info.aka.charAt(0).toLowerCase()+info.aka.slice(1))}.</p></div>
+    <div class="figcard">${bodyFig({[k]:1},{sel:[k]})}<p class="small center" style="margin:0">${esc(info.where)}</p></div>
+    <div class="mfacts">${fact("What it does",info.does)}${fact("In everyday life",info.life)}${fact("How it should feel",info.feel)}</div>
+    <div class="mtip"><b>Good to know</b><p>${esc(info.tip)}</p></div>
+    <section class="card"><h3>Exercises that train it</h3><p class="small muted">Tap one to see how to do it.</p>
+      <div class="exlist">${main.map(([id,e])=>row(id,e,inPlan.has(id)?"in your plan":"main")).join("")}${help.map(([id,e])=>row(id,e,"helps a little")).join("")||""}</div></section>
+    ${str?`<section class="card"><h3>Stretches for it</h3><p class="small muted">After training, never before. Gentle, not painful.</p><div class="swaplist">${str}</div></section>`:""}
+    <p class="small muted center">${st?`${+st.raw.toFixed(1)} ${st.raw===1?"set":"sets"} in the last 7 days. `:""}${ago}</p>
+    <button class="btn ghost block" data-act="close-sheet">Close</button></div>`);
+}
+function muscleGuide(){
+  const by={}; Object.entries(MUSCLES).forEach(([k,m])=>(by[m.g]=by[m.g]||[]).push(k));
+  const blurb={push:"Push things away",pull:"Pull things toward you",legs:"Stand, walk, climb",core:"Hold you steady"};
+  return `<section class="card mlearn"><h3>Get to know your muscles</h3><p class="small muted">What each one does, how it should feel, and the exercises and stretches for it.</p>
+    ${Object.keys(GROUPS).map(g=>`<div class="mgroup"><div class="small"><b>${esc(GROUPS[g].n)}</b> <span class="muted">· ${blurb[g]}</span></div><div class="mchips" style="justify-content:flex-start">${(by[g]||[]).map(k=>`<button class="mchip" data-act="m-learn" data-m="${k}">${esc(MUSCLES[k].n)}</button>`).join("")}</div></div>`).join("")}</section>`;
+}
 function viewLearn(){
   const st=muscleStatus(), band=st.band, sel=S.selMuscle;
-  let panel=`<div class="mpanel muted small">Tap a muscle to see how it stands and which exercises work it.</div>`;
+  let panel=`<div class="mpanel muted small">Tap a muscle on the picture to see how it stands this week.</div>`;
   if(sel&&st.mus[sel]){
     const m=st.mus[sel], col=m.color||"var(--m-idle)";
     const exs=Object.entries(EX).filter(([k,e])=>!e.placeholder&&(e.m.includes(sel)||e.s.includes(sel)));
@@ -994,13 +1129,15 @@ function viewLearn(){
     panel=`<div class="mpanel"><div class="spread"><h3>${MUSCLES[sel].n}</h3><span class="zone" style="background:${col};color:#fff">${STATUS_TXT[m.k]}</span></div>
       <div class="meter grad" style="background:linear-gradient(90deg,${loadColor(band.lo*.2,band)},${loadColor(band.lo*.8,band)},${loadColor((band.lo+band.hi)/2,band)},${loadColor(band.hi*1.25,band)},${loadColor(band.hi*2,band)})"><b style="left:${Math.min(100,m.L/(band.hi*2)*100)}%"></b></div>
       <div class="small muted"><span class="num">${+m.raw.toFixed(1)}</span> ${m.raw===1?"set":"sets"} in the last 7 days. ${ago}${m.recovering?" Still recovering.":""}</div>
-      <div class="exlist">${exs.map(([k,e])=>`<button data-act="ex-info" data-ex="${k}">${esc(e.n)}<span>${e.m.includes(sel)?"main":"helper"}</span></button>`).join("")}</div></div>`;
+      <button class="btn primary block" data-act="m-learn" data-m="${sel}">Learn about your ${esc(MUSCLES[sel].n.toLowerCase())}</button></div>`;
   }
   return `<header class="top"><div class="spread"><div class="eyebrow">Last 7 days</div><button class="pill" data-act="lib">Exercise library</button></div><h1 class="hello">Your body this week</h1>
     <p class="muted small">Every set you log, fading out a day at a time. Green is the right amount for your phase (${esc(band.ph.name.toLowerCase())}).</p></header>
-    <div class="figcard big">${bodyFig(statusLevels(st),{tap:true})}${loadLegend()}</div>
+    <div class="figcard big">${bodyFig(statusLevels(st),{tap:true,sel:sel?[sel]:[]})}${loadLegend()}
+      <div class="seg figpick" role="group" aria-label="Which figure to show"><button class="${figKind()==="male"?"on":""}" data-act="figure" data-v="male" aria-pressed="${figKind()==="male"}">Male figure</button><button class="${figKind()==="female"?"on":""}" data-act="figure" data-v="female" aria-pressed="${figKind()==="female"}">Female figure</button></div></div>
     ${insightLines(bodyInsight(st))}
     ${panel}
+    ${muscleGuide()}
     <section class="card"><h3>The basics, in one minute each</h3>${BASICS.map(b=>`<details class="acc"><summary>${esc(b.t)}</summary><p class="small">${esc(b.b)}</p></details>`).join("")}</section>
     <button class="btn block" data-act="lib">Browse all exercises</button>`;
 }
@@ -1150,6 +1287,17 @@ function addToSession(kind,k){
 }
 
 /* ---------- progress ---------- */
+/* three plain wins at the top of Progress */
+function progressTiles(){
+  const ws=doneWorkouts(), first={}, last={};
+  ws.slice().reverse().forEach(w=>{ const top={};
+    (w.sets||[]).forEach(x=>{ if(x.done&&EX[x.ex]) top[x.ex]=Math.max(top[x.ex]||0,EX[x.ex].inc===0?(+x.r||0):(+x.w||0)); });
+    Object.entries(top).forEach(([ex,v])=>{ if(!(ex in first)) first[ex]=v; last[ex]=v; }); });
+  const up=Object.keys(first).filter(ex=>last[ex]>first[ex]).length, win=bestWin();
+  return `<div class="tiles three"><div class="tile mint"><b class="tn num">${ws.length}</b><span>${ws.length===1?"workout":"workouts"} done</span></div>
+    <div class="tile sun"><b class="tn num">${up}</b><span>${up===1?"lift has":"lifts have"} gone up</span></div>
+    <div class="tile pink"><b class="tn num">${win?"+"+fmtKg(win.gain):"0"}<small> kg</small></b><span>${win?"on "+esc(lc1(EX[win.ex].n)):"biggest gain so far"}</span></div></div>`;
+}
 function viewProgress(){
   const logged=[...new Set(doneWorkouts().flatMap(w=>(w.sets||[]).filter(s=>s.done).map(s=>s.ex)))];
   const opts=Object.entries(EX).filter(([k])=>logged.includes(k)).map(([k,e])=>`<option value="${k}" ${S.chartEx===k?"selected":""}>${esc(e.n)}</option>`).join("");
@@ -1165,6 +1313,7 @@ function viewProgress(){
       <span class="tt"><b>${fmtDate(w.date)}</b><span>${esc(histName(w))}</span><small class="muted">${s.length} sets · ${Object.keys(byEx).length} exercises${w.durationMin?" · "+w.durationMin+" min":""}${hrTxt}</small></span><span class="chev">›</span></button>`;
   }).join("");
   return `${notice()}<header class="top"><div class="eyebrow">Consistency beats intensity</div><h1 class="hello">Progress</h1></header>
+  ${progressTiles()}
   <section class="card"><div class="spread"><h3>Last 8 weeks</h3><span class="small muted">workouts / week</span></div>${weekStrip()}</section>
   <section class="card chart"><div class="spread"><h3>Getting stronger</h3>${opts?`<select id="chartEx" data-act="chart-ex" class="sel">${opts}</select>`:""}</div>
     ${logged.length?strengthChart(S.chartEx):`<p class="small muted">After your first couple of workouts, a line shows each lift going up.</p>`}</section>
@@ -1247,7 +1396,8 @@ function strengthChart(exId){
     <path d="${area}" fill="url(#ga)"/><path d="${line}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
     <circle cx="${x(pts.length-1)}" cy="${y(last.v)}" r="4.5" fill="var(--accent)"/>
     <text x="${pl}" y="${H-5}" font-size="9" fill="var(--muted)">${fmtDate(first.d)}</text><text x="${W-pr}" y="${H-5}" text-anchor="end" font-size="9" fill="var(--muted)">${fmtDate(last.d)}</text></svg>
-    <p class="small"><b class="num" style="color:var(--accent)">${diff>=0?"+":""}${diff.toFixed(1)}${e.inc===0?(e.timed?" s":" reps"):" kg"}</b> <span class="muted">${e.inc===0?"best set":"estimated max"} since ${fmtDate(first.d)}</span></p>`;
+    <p class="small"><b class="num" style="color:var(--accent)">${diff>=0?"+":""}${diff.toFixed(1)}${e.inc===0?(e.timed?" s":" reps"):" kg"}</b> <span class="muted">${e.inc===0?"best set":"estimated max"} since ${fmtDate(first.d)}</span></p>
+    ${e.inc===0?"":`<p class="tiny muted">Estimated max is the most you could probably lift once, worked out from the weight and reps you logged. It lets a set of 40 kg × 12 be compared fairly with 45 kg × 8.</p>`}`;
 }
 
 
@@ -1337,6 +1487,10 @@ document.addEventListener("click",async ev=>{
   if(a==="go-signin"){ go(()=>{ S.view="progress"; S.paused=!!S.active; }); setTimeout(()=>{ const e=$("#acct-email"); if(e){ e.scrollIntoView({behavior:"smooth",block:"center"}); } },350); return; }
   if(a==="tab"){ go(()=>{ S.view=b.dataset.v; S.paused=!!S.active; try{localStorage.setItem("cr_view",S.view);}catch(e){} if(S.view!=="coach") S.coachFocus=null; }); }
   else if(a==="start"){ closeSheet(); startSession(b.dataset.day); }
+  else if(a==="refresh-yes"||a==="refresh-no"){ const r=refreshDue(); if(!r) return;
+    /* yes: move to the next block. no: ask again after two more rounds. Either way the count restarts from here. */
+    const patch=a==="refresh-yes"?{block:planBlock()+1,blockStart:r.done}:{blockStart:r.done-(REFRESH_ROUNDS-2)*ROUND_LEN};
+    if(await saveSettings(patch)){ applyBlock(); render(); toast(a==="refresh-yes"?"Plan refreshed":"Keeping the plan as it is"); } }
   else if(a==="free"){ startCustom({dayId:"free",dayName:"My own workout",ex:[]}); }
   else if(a==="own-g"){ const g=b.dataset.g, cur=new Set(S.ownGroups||S.settings?.ownGroups||[]); cur.has(g)?cur.delete(g):cur.add(g); S.ownGroups=OWN_GROUPS.map(x=>x[0]).filter(x=>cur.has(x)); render(); }
   else if(a==="own-start"){ const plan=S.ownGroups||S.settings?.ownGroups||[]; S.settings={...(S.settings||{}),ownGroups:plan}; writeSettings(); startCustom({dayId:"free",dayName:plan.length?"My own · "+plan.join(", "):"My own workout",ex:[],plan}); }
@@ -1390,6 +1544,8 @@ document.addEventListener("click",async ev=>{
   else if(a==="swap-to"){ replaceEx(+b.dataset.i,b.dataset.to); }
   else if(a==="swap-lib"){ S.replaceIdx=+b.dataset.i; libSheet({mode:"pick"}); }
   else if(a==="close-sheet"){ S.edit=null; closeSheet(); }
+  else if(a==="m-learn"){ muscleSheet(b.dataset.m); }
+  else if(a==="figure"){ if(await saveSettings({figure:b.dataset.v})) render(); }
   else if(a==="muscle"){ const keys=Object.keys(SLUG).filter(k=>(SLUG[k][b.dataset.side==="front"?"f":"b"]||[]).includes(b.dataset.slug)); S.selMuscle=keys.length>1&&keys.includes(S.selMuscle)?keys[(keys.indexOf(S.selMuscle)+1)%keys.length]:keys[0]; render(); }
   else if(a==="step"){ if(b.dataset.close) closeSheet(); if(+b.dataset.i!==1) stopRest(); go(()=>{ S.step=+b.dataset.i; if(S.step===1&&S.exIdx>=sessionDay(S.active).ex.length) S.exIdx=0; }); }
   else if(a==="goto"){ if(b.dataset.close) closeSheet(); go(()=>{ S.step=1; S.exIdx=Math.max(0,+b.dataset.i); S.hint=""; }); }
@@ -1745,7 +1901,7 @@ function coachContext(){
     return `${w.date} ${wLabel(w)}: `+Object.entries(byEx).map(([k,a])=>`${EX[k]?.n}: ${a.join(", ")}`).join("; ")+(w.rpe?` | session effort ${w.rpe}/10`:"")+(()=>{ const h=sessionHR(w); return h?` | watch HR avg ${h.avg}, peak ${h.max}, ${h.zones.hard+h.zones.peak} min hard or peak (zones use max HR ${maxHR()})`:(w.avgHr?` | avg HR ${w.avgHr}`:""); })()+(w.notes?` | notes: ${w.notes}`:"");
   }).join("\n")||"No sessions logged yet.";
   const uc=usingCustom(), cds=customDays(), g=gymSet();
-  const prog=planDays().map(d=>{ const r=resolveDay(d); return `${d.custom?"":`Day ${d.id} `}${d.name}: ${r.ex.map((id,i)=>`${EX[id].n} ${setsFor(d,d.ex[i],ph)}x${EX[id].r[0]}-${EX[id].r[1]}${r.swaps[id]?` (swapped in for ${EX[r.swaps[id]].n}, gym lacks the equipment)`:""}${r.missing.includes(id)?" (his gym lacks the equipment, no swap found)":""}`).join(", ")}`; }).join("\n");
+  const prog=planDays().map(d=>{ const r=resolveDay(d); return `${d.name}: ${r.ex.map((id,i)=>`${EX[id].n} ${setsFor(d,d.ex[i],ph)}x${EX[id].r[0]}-${EX[id].r[1]}${r.swaps[id]?` (swapped in for ${EX[r.swaps[id]].n}, gym lacks the equipment)`:""}${r.missing.includes(id)?" (his gym lacks the equipment, no swap found)":""}`).join(", ")}`; }).join("\n");
   const others=!uc&&cds.length?`\nHIS OWN SAVED WORKOUTS (extra, not the main plan):\n${cds.map(d=>`${d.name}: ${d.ex.map(id=>`${EX[id].n}${EX[id].custom?" (his own exercise)":""} ${setsFor(d,id,ph)}x${EX[id].r[0]}-${EX[id].r[1]}`).join(", ")}`).join("\n")}`:"";
   const ae=allEquip(), ce=customEquip();
   const gear=(g?`GYM EQUIPMENT HE HAS: ${ae.filter(([k])=>g.has(k)).map(x=>x[1]).join(", ")||"nothing ticked, bodyweight only"}. NOT AVAILABLE: ${ae.filter(([k])=>!g.has(k)).map(x=>x[1]).join(", ")||"nothing"}.`:"GYM EQUIPMENT: not set, assume a fully equipped gym.")
@@ -1809,7 +1965,7 @@ async function startCustom({dayId,dayName,ex,counts,plan}){
   await ensureStart();
   const wk=currentWeek(), ph=phaseFor(wk), list=(ex||[]).filter(id=>EX[id]), sets=[];
   list.forEach(id=>{ const n=Math.max(1,Math.min(8,+counts?.[id]||ph.sets)); sets.push(...plannedSets(id,n)); });
-  S.active={id:uid(),status:"active",where:atHome()?"home":"gym",dayId,dayName:dayName||"My own workout",week:wk,date:todayISO(),startedAt:new Date().toISOString(),exList:list,swaps:{},missing:[],sets,warm:{},cool:{},...(plan?{plan}:{}),learn:(()=>{ const r=returnState(); return r?[{k:"return",t:`<b>Welcome back.</b> ${r.off} days off, so weights start ${r.factor<1?`about ${Math.round((1-r.factor)*100)}% lighter`:"where you left off"}. Do fewer sets than usual today; your joints need a session to catch up.`}]:[]; })()};
+  S.active={id:uid(),status:"active",where:atHome()?"home":"gym",dayId,dayName:dayName||"My own workout",week:wk,n:wk,date:todayISO(),startedAt:new Date().toISOString(),exList:list,swaps:{},missing:[],sets,warm:{},cool:{},...(plan?{plan}:{}),learn:(()=>{ const r=returnState(); return r?[{k:"return",t:`<b>Welcome back.</b> ${r.off} days off, so weights start ${r.factor<1?`about ${Math.round((1-r.factor)*100)}% lighter`:"where you left off"}. Do fewer sets than usual today; your joints need a session to catch up.`}]:[]; })()};
   S.step=0; S.exIdx=0; S.hint=""; S.paused=false; S.view="today"; closeSheet(); render(); window.scrollTo(0,0);
   await saveActive();
   requestWake();
@@ -1852,7 +2008,7 @@ async function startSession(dayId){
   const base=Object.fromEntries(res.ex.map((id,i)=>[id,adjBy[id]??setsFor(day,day.ex[i],ph)])), lrn=learnAdjust(res.ex,base);
   res.ex.forEach(id=>{ sets.push(...plannedSets(id,lrn.sets[id],lrn.wf[id])); });
   const learn=lrn.notes;
-  S.active={id:uid(),status:"active",where:atHome()?"home":"gym",dayId,dayName:day.name,week:wk,date:todayISO(),startedAt:new Date().toISOString(),exList:res.ex,swaps:res.swaps,missing:res.missing,adjust,learn,sets,warm:{},cool:{}};
+  S.active={id:uid(),status:"active",where:atHome()?"home":"gym",dayId,dayName:day.name,week:wk,n:wk,date:todayISO(),startedAt:new Date().toISOString(),exList:res.ex,swaps:res.swaps,missing:res.missing,adjust,learn,sets,warm:{},cool:{}};
   S.step=0; S.exIdx=0; S.hint=""; S.paused=false; S.view="today"; render(); window.scrollTo(0,0);
   await saveActive();
   requestWake();
@@ -1884,7 +2040,7 @@ render();
   await Store.seedIfEmpty("data/seed.json");
   setTimeout(warmPhotos,4000);
   /* settings first, so custom exercises exist before workouts reference them */
-  S.settings=await Store.getSettings(); applyCustomEx();
+  S.settings=await Store.getSettings(); applyCustomEx(); applyBlock();
   const takeWorkouts=list=>{
     S.workouts=list.sort((a,b)=>String(b.date+(b.startedAt||"")).localeCompare(a.date+(a.startedAt||"")));
     S.workouts.forEach(w=>{ (w.sets||[]).forEach(s=>ensureEx(s.ex)); (w.exList||[]).forEach(ensureEx); });
@@ -1895,7 +2051,7 @@ render();
   S.checkins=await Store.list("checkins"); hydratePhotoUrls();
   S.dbState="on"; render();
   /* live updates (sync from another device, imports): never redraw mid-set */
-  Store.subscribe("settings",s=>{ S.settings=s; applyCustomEx(); if(!inSession()) render(); });
+  Store.subscribe("settings",s=>{ S.settings=s; applyCustomEx(); applyBlock(); if(!inSession()) render(); });
   Store.subscribe("workouts",list=>{ const was=inSession(); takeWorkouts(list); if(!inSession()||!was) render(); });
   Store.subscribe("checkins",list=>{ S.checkins=list; hydratePhotoUrls(); if(!inSession()) render(); });
   /* cloud: optional */

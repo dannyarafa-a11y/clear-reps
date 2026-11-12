@@ -26,8 +26,10 @@ function muscleLoad(opts={}){
 /* the target band moves with the phase: lighter while easing back in */
 function loadBand(){
   const ph=phaseFor(currentWeek());
-  if(ph.key==="build") return {lo:6,hi:12,ph};
-  return {lo:3.5,hi:8,ph};
+  /* tuned to the full-body round: a muscle trained every other workout, a few times a week, lands in the green.
+     A rule of thumb for the picture, not a prescription. */
+  if(ph.key==="build") return {lo:2,hi:7,ph};
+  return {lo:1.5,hi:6,ph};
 }
 /* blue (light) → green (right amount) → orange → red (overworked) */
 const LOAD_STOPS=[[0,"#C9D7FF"],[.45,"#3366FF"],[1,"#12A365"],[1.5,"#12A365"],[1.85,"#F2A516"],[2.3,"#E5484D"]];
@@ -66,7 +68,7 @@ function bodyInsight(st){
 function insightLines(ins){
   const row=(c,h,t,sub)=>`<li><i class="dot" style="background:${c}"></i><span><b>${h}</b> ${esc(t)}${sub?` <span class="muted">${esc(sub)}</span>`:""}</span></li>`;
   const out=[];
-  if(ins.needs.length) out.push(row("#3366FF","Needs work:",mNames(ins.needs.slice(0,4))+".","Little this week."));
+  if(ins.needs.length) out.push(row("#3D7DFF","Could use more:",mNames(ins.needs.slice(0,4))+".","Little in the last 7 days."));
   if(ins.rec.length) out.push(row("#F2A516","Recovering:",mNames(ins.rec.slice(0,4))+".","Trained in the last day or sore."));
   if(ins.over.length) out.push(row("#E5484D","Overworked:",mNames(ins.over)+".","Rest them a few days."));
   if(ins.good.length&&out.length<3) out.push(row("#12A365","Right amount:",mNames(ins.good.slice(0,4))+".",""));
@@ -93,15 +95,14 @@ function planAdjust(day,res,ph,st){
     if(over.length){ n=Math.max(1,base-1); type="over"; mus=over; }
     else if(rec.length&&base>1){ n=base-1; type="rec"; mus=rec; }
     else if(high.length&&base>2){ n=base-1; type="high"; mus=high; }
-    else if(low&&ph.key!=="deload"&&base<4&&!ret){ n=base+1; type="low"; mus=prim; }
     if(n!==base) adj.push({ex:id,from:base,to:n,type,mus,why:ADJ_WHY[type](mus)});
   });
   return adj;
 }
 const ADJ_WHY={
-  over:m=>`${mNames(m)}: already overworked this week.`,
+  over:m=>`${mNames(m)}: already overworked in the last 7 days.`,
   rec:m=>`${mNames(m)}: still recovering (trained in the last day or reported sore).`,
-  high:m=>`${mNames(m)}: already had a lot this week.`,
+  high:m=>`${mNames(m)}: already had a lot in the last 7 days.`,
   low:m=>`${mNames(m)}: little or no work this week.`
 };
 const ADJ_HEAD={low:"One extra set",rec:"One set less",over:"One set less",high:"One set less"};
@@ -137,17 +138,17 @@ function lastTimeLine(id){
 
 /* ---------- debriefs ---------- */
 function preBrief(w,day){
-  const ph=phaseFor(w.week||currentWeek()), st=muscleStatus({skipId:w.id}), ins=bodyInsight(st), free=w.dayId==="free";
+  const ph=phaseFor(w.n??currentWeek()), st=muscleStatus({skipId:w.id}), ins=bodyInsight(st), free=w.dayId==="free";
   const items=[];
   if(free) items.push(`<li><b>Your own workout${(w.plan||[]).length?": "+esc(w.plan.join(" + ")):""}.</b> Starts empty. Add each exercise as you get to it. The warm-up matches what you picked.</li>`);
-  items.push(`<li><b>${esc(ph.name)}:</b> ${free?"":`${ph.sets} sets each, `}stop with ${esc(ph.rir)} reps left in the tank.</li>`);
+  items.push(`<li><b>${esc(ph.name)}:</b> ${free?"":day.custom||ph.sets<3?`${ph.sets} sets each, `:`${ph.sets} sets on the three main lifts, 2 on the finishers, `}stop each set with ${esc(ph.rir)} reps left in the tank. <span class="muted">Trainers call this reps in reserve.</span></li>`);
   (w.learn||[]).forEach(n=>items.push(`<li>${n.t}</li>`));
   items.push(...adjustLines(w.adjust));
   const gear=Object.entries(w.swaps||{}).filter(([nw,orig])=>EX[nw]&&EX[orig]&&!(w.userSwaps||{})[nw]);
   if(gear.length) items.push(`<li><b>Swapped for your gym:</b> ${esc(gear.map(([nw,orig])=>`${EX[nw].n} instead of ${EX[orig].n}`).join(", "))}.</li>`);
   const ups=day.ex.filter(id=>targetFor(id).up);
   if(ups.length) items.push(`<li><b>Weight goes up:</b> ${esc(ups.map(id=>`${EX[id].n} (${targetFor(id).short.split(" · ")[0]})`).join(", "))}. <span class="muted">Every set hit the top of the range last time.</span></li>`);
-  if(free&&!(w.plan||[]).length&&ins.needs.length) items.push(`<li><b>Good picks today:</b> ${esc(mNames(ins.needs.slice(0,3)))}. <span class="muted">Least work this week. Worth telling your trainer.</span></li>`);
+  if(free&&!(w.plan||[]).length&&ins.needs.length) items.push(`<li><b>Good picks today:</b> ${esc(mNames(ins.needs.slice(0,3)))}. <span class="muted">Least work in the last 7 days. Worth telling your trainer.</span></li>`);
   if(free&&ins.rec.length) items.push(`<li><b>Go easier on:</b> ${esc(mNames(ins.rec.slice(0,3)))}. <span class="muted">Trained in the last day.</span></li>`);
   return `<details class="brief" ${S.briefShut?"":"open"}><summary><span class="eyebrow">Before you start</span><b>Today's plan, explained</b><span class="chev">›</span></summary>
     <ul>${items.join("")}</ul>
@@ -185,7 +186,7 @@ function postBrief(w){
   return `<section class="card brief post"><div class="eyebrow">Debrief</div><h3>What happened, and what's next</h3>
     <ul class="pblist">${rows}</ul>
     <div class="brief-map">${bodyFig(statusLevels(st),{cls:"mini"})}<div><p class="small muted" style="margin:0 0 6px">Your muscles over the last 7 days, including today</p>${insightLines(ins)}</div></div>
-    <p class="tiny muted">Next planned workout adjusts its sets to this: fewer for muscles that are recovering or overworked, more for ones that need work.</p></section>`;
+    <p class="tiny muted">Your next workout eases off anything that is still recovering or overworked. It never piles extra sets on.</p></section>`;
 }
 
 /* ---------- swap ---------- */
@@ -212,7 +213,7 @@ function swapSheet(i){
 function replaceEx(i,to){
   const w=S.active, ex=[...sessionDay(w).ex], from=ex[i]; if(!from||!EX[to]||from===to) return;
   if(ex.includes(to)){ toast("Already in this workout"); return; }
-  const ph=phaseFor(w.week||currentWeek());
+  const ph=phaseFor(w.n??currentWeek());
   const undone=w.sets.filter(s=>s.ex===from&&!s.done).length, doneN=w.sets.filter(s=>s.ex===from&&s.done).length;
   const n=undone||(doneN?0:ph.sets)||ph.sets;
   w.sets=w.sets.filter(s=>s.ex!==from||s.done);
@@ -514,8 +515,8 @@ function monthReport(mk){
   const [y,m]=mk.split("-").map(Number), label=new Date(y,m-1,1).toLocaleDateString("en-GB",{month:"long",year:"numeric"});
   const L=[];
   L.push(`# Clear Reps · monthly training summary · ${label}`,"");
-  L.push(`I'm Danny. I'm getting back into the gym after time off, train about 3 times a week (often with a personal trainer who picks exercises on the day), and want clarity, steady progress and no injuries. Please analyse this month: what went well, what's lagging or unbalanced, any signs of overdoing it, and 3–5 specific changes for next month (exercises, sets, weights, rest days). Keep it simple and practical.`,"");
-  L.push(`## Program`,`- Split: A Legs + Shoulders · B Chest + Arms · C Back + Glutes + Core, plus "My own" sessions built on the day.`,`- Phases: weeks 1–2 ease in (2 sets, 3–4 reps in reserve), then build (3 sets, 1–2 in reserve), every 5th week lighter.`,`- Current: week ${currentWeek()}, ${phaseFor(currentWeek()).name}.`,`- Weights: dumbbell weights are per dumbbell. Feel per set: Easy (4+ reps left) / Good (2–3 left) / Tough (barely).`,"");
+  L.push(`I'm Danny. I'm getting back into the gym after time off, train two to four times a week (often with a personal trainer who picks exercises on the day), and want clarity, steady progress and no injuries. Please analyse this month: what went well, what's lagging or unbalanced, any signs of overdoing it, and 3–5 specific changes for next month (exercises, sets, weights, rest days). Keep it simple and practical.`,"");
+  L.push(`## Program`,`- Plan: a round of four full-body workouts done in order whenever I train (leg lift + push + pull at 3 sets, two finishers at 2 sets), plus "My own" sessions built on the day.`,`- Phases, counted in workouts: first 4 ease in (2 sets, 3–4 reps in reserve), then build (1–3 in reserve), with 2 lighter workouts after every 14.`,`- Current: ${currentWeek()} workouts done in total, ${phaseFor(currentWeek()).name}.`,`- Weights: dumbbell weights are per dumbbell. Feel per set: Easy (4+ reps left) / Good (2–3 left) / Tough (barely).`,"");
   if(!ws.length){ L.push("No workouts logged this month."); return L.join("\n"); }
   /* attendance */
   const days=ws.map(w=>w.date), gaps=[]; for(let i=1;i<all.length;i++){ const g=daysBetween(all[i-1].date,all[i].date); if(g>=7&&monthKey(all[i].date)===mk) gaps.push(`${g} days before ${all[i].date}`); }

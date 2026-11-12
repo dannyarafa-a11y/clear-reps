@@ -1,15 +1,15 @@
 /* Clear Reps service worker: the app shell and exercise library are cached on install so the app
    opens with no signal; exercise photos are cached the first time they are seen.
    Bump VERSION whenever you change the app files, so phones pick up the new version. */
-const VERSION = "v2.6.1";
+const VERSION = "v3.0.0";
 const SHELL = "cr-shell-" + VERSION, IMG = "cr-img-v1";
 const BASE = new URL("./", self.location).pathname;
 const SHELL_FILES = [
   "", "index.html", "manifest.webmanifest", "css/app.css",
   "js/config.js", "js/body.js", "js/store.js", "js/smart.js", "js/app.js", "vendor/supabase.js",
   "data/library.json", "data/seed.json",
-  "fonts/outfit-latin-500-normal.woff2", "fonts/outfit-latin-600-normal.woff2", "fonts/outfit-latin-700-normal.woff2", "fonts/outfit-latin-800-normal.woff2",
-  "fonts/manrope-latin-400-normal.woff2", "fonts/manrope-latin-500-normal.woff2", "fonts/manrope-latin-600-normal.woff2", "fonts/manrope-latin-700-normal.woff2",
+  "fonts/bricolage-grotesque-latin-600-normal.woff2", "fonts/bricolage-grotesque-latin-700-normal.woff2", "fonts/bricolage-grotesque-latin-800-normal.woff2",
+  "fonts/dm-sans-latin-400-normal.woff2", "fonts/dm-sans-latin-500-normal.woff2", "fonts/dm-sans-latin-600-normal.woff2", "fonts/dm-sans-latin-700-normal.woff2",
   "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"
 ].map(p => BASE + p);
 
