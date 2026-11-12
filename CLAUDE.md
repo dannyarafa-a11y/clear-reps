@@ -8,8 +8,14 @@ Live at https://dannyarafa-a11y.github.io/clear-reps/ (GitHub Pages from `main`,
 on his iPhone as a home-screen app. He usually tests on the phone, often mid-workout.
 
 ## Ground rules
-- **Design:** light, minimal, positive. White cards on soft grey, one blue accent `#3366FF`,
-  Outfit (display) + Manrope (text), big tap targets. No dark mode, no orange, nothing text-heavy.
+- **Design ("Sunny Blocks", Nov 2026):** warm and friendly, not "tech UI". Cream ground `#FFF8EC`,
+  deep brown ink `#23180F` (buttons are ink), colour blocks: butter `--sun` for "do this now", mint for
+  progress, pink for wins. Sky blue `--muscle` is only for the body map. Bricolage Grotesque (display) +
+  DM Sans (text), self-hosted in `fonts/`. Sentence case everywhere, no tracked capitals, few borders,
+  big tap targets. No dark mode, no orange. The theme lives in the tokens at the top of `css/app.css`
+  plus the "Sunny Blocks theme" block at the bottom.
+- **Keep the knowledge.** Danny likes the body map and wants to learn: say things in plain words first,
+  then name the real term (reps in reserve, deload, double progression). Never dumb it down by deleting.
 - **No build step.** Plain HTML/CSS/JS, served as static files. Keep it that way.
 - **Bump `VERSION` in `sw.js` on every change**, or phones keep the old copy.
   The app checks for updates on open and switches over, except during an active workout.
@@ -38,22 +44,29 @@ on his iPhone as a home-screen app. He usually tests on the phone, often mid-wor
   Shortcut), unused `coach` function.
 
 ## How the "smart" parts work (all plain rules, no AI)
+- **The plan:** a round of four full-body workouts (`DAYS`, ids "1"–"4"), done in order whenever he
+  trains; there is no weekly target. Each is a leg lift, a push and a pull (3 sets) plus two finishers
+  (2 sets, `setsFor`). Main lifts alternate between two sets so each returns every second workout.
+  `BLOCKS` holds the versions of the round; `refreshDue` offers the next one after six rounds
+  (`settings.block`, `settings.blockStart`) and nothing changes unless he accepts. Old A/B/C workouts
+  keep their saved `dayName` in history.
 - **Progression:** each set starts from the matching set last time (`plannedSets`); weight goes
   up when every set hits the top of the rep range (`targetFor`). Easy/Good/Tough adjusts the
   next set live.
-- **Phases** by week since start: ease in (2 sets, 3–4 RIR) → build (3 sets, 1–2 RIR), every
-  5th week lighter (`phaseFor`).
+- **Phases** are counted in workouts done, not weeks (`currentWeek()` now returns that count):
+  first 4 ease in (2 sets, 3–4 RIR) → build (1–3 RIR), with 2 lighter workouts after every 14 (`phaseFor`).
 - **7-day body map** (`muscleStatus`): sets fade linearly over 7 days; colour blue → green
   (right amount for the phase) → orange → red. Used on the Body tab only.
 - **In-workout map** (`sessionGrad`): same colour scale, judged per session (2–5 sets per
   muscle easing in, 3–8 building). Plan previews stay plain blue.
-- **Plan adjustments** (`planAdjust`): ±1 set per exercise from the 7-day status and soreness.
+- **Plan adjustments** (`planAdjust`): −1 set for muscles that are recovering, sore or overworked.
+  It never adds sets (the old +1 rule inflated every session).
 - **Learning layer** (`learnAdjust`): ease back after 10+ days off; trim after "brutal"
   sessions; lighten exercises that keep feeling Tough; break stalls (3 flat sessions);
   low readiness from Apple Health. Every change is explained in the pre-workout brief.
 - **Soreness check-in:** saved on the workout as `sore:{muscle:1|2}`; sore = recovering 48h.
 - **Monthly summary** (`monthReport`): Markdown written for Claude/ChatGPT to analyse.
-- **Gym | Home switch:** `S.settings.where`; at home the A/B/C days use `HOME_DAYS`.
+- **Gym | Home switch:** `S.settings.where`; at home the four workouts use `HOME_DAYS`.
 - **My own workout:** `dayId:"free"`, starts empty, `plan` = muscle groups picked on Home.
 
 ## Data and accounts
@@ -73,6 +86,13 @@ on his iPhone as a home-screen app. He usually tests on the phone, often mid-wor
 - Commit author: Danny Arafa. Danny reads replies on his phone: keep them short, no file paths.
 
 ## Where we left off (Nov 2026)
+v3.0.0: Sunny Blocks restyle, round-of-four full-body plan, Home rebuilt around one workout card plus
+round and win tiles, finish screen leads with what went up, win tiles on Progress.
+Body map redrawn as a person (skin, no hair, a gap round each muscle; `bodyFig` takes `sel` to outline
+muscles). Male or female figure: `settings.figure`, switch on the Body tab; `BODY_F` in `js/body.js`.
+Body tab has "Get to know your muscles": `MUSCLE_INFO` + `muscleSheet` (what it does, how it feels,
+exercises and stretches for it).
+
 Done recently: Gym | Home switch, My own workout, rolling 7-day map, per-session map, soreness
 check-in, learning layer, monthly AI summary, stretch fixes (single-person photos, coverage map,
 video links), coach tab removed.
