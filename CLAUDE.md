@@ -93,6 +93,10 @@ muscles). Male or female figure: `settings.figure`, switch on the Body tab; `BOD
 Body tab has "Get to know your muscles": `MUSCLE_INFO` + `muscleSheet` (what it does, how it feels,
 exercises and stretches for it).
 
+v3.1.0: weight/reps changes carry to later sets (`carryForward`); "⇄ Superset" button next to
+Add exercise (`S.ssWith`); adding a set in a superset adds one to partners; Settings sheet (gear on Home)
+holds the male/female figure, My gym, Backup & sync; cues are no longer cut off.
+
 Done recently: Gym | Home switch, My own workout, rolling 7-day map, per-session map, soreness
 check-in, learning layer, monthly AI summary, stretch fixes (single-person photos, coverage map,
 video links), coach tab removed.
