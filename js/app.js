@@ -234,7 +234,6 @@ const exGroups = e => e.grp || [...new Set((e.m||[]).map(m=>MUS_GRP[m]).filter(B
 function cueOf(s){
   let t=String(s||"").replace(/\s+/g," ").trim().replace(/\s*This (will be|is) your start(ing)? position\.?/i,"").trim();
   const m=t.match(/^.+?[.!?](\s|$)/); if(m) t=m[0].trim();
-  if(t.length>110) t=t.slice(0,106).replace(/\s+\S*$/,"")+"…";
   return t;
 }
 /* compact record kept in settings.libEx so history and targets work without the library loaded */
@@ -689,7 +688,7 @@ function viewToday(){
     :`<div class="tile pink"><b class="tl">Start here</b><b class="tn">Day one</b><span>The first workout finds your weights.</span></div>`;
   const notes=[`<span>${esc(ph.name)}</span>`,nSwap?`<span>${nSwap} swapped for your gym</span>`:"",lrnH.notes.length?`<span class="adj">${lrnH.notes.some(n=>n.k==="return")?"Easing back in":"Tuned to your log"}</span>`:"",adj.length?`<span class="adj">${adj.length} eased for recovery</span>`:""].join("");
   return `${notice()}
-  <header class="top"><div class="spread"><div class="muted small">${esc(date)}</div><div class="row" style="gap:6px;flex-wrap:nowrap"><div class="seg where" role="group" aria-label="Where are you training?"><button class="${atHome()?"":"on"}" data-act="where" data-v="gym" aria-pressed="${!atHome()}">Gym</button><button class="${atHome()?"on":""}" data-act="where" data-v="home" aria-pressed="${atHome()}">Home</button></div>${atHome()?"":`<button class="pill quiet" data-act="gym" aria-label="My gym">${GEAR_I}</button>`}</div></div>
+  <header class="top"><div class="spread"><div class="muted small">${esc(date)}</div><div class="row" style="gap:6px;flex-wrap:nowrap"><div class="seg where" role="group" aria-label="Where are you training?"><button class="${atHome()?"":"on"}" data-act="where" data-v="gym" aria-pressed="${!atHome()}">Gym</button><button class="${atHome()?"on":""}" data-act="where" data-v="home" aria-pressed="${atHome()}">Home</button></div><button class="pill quiet" data-act="settings" aria-label="Settings">${GEAR_I}</button></div></div>
     <h1 class="hello">Hey ${esc(name)}.<br>${esc(helloLine(r))}</h1></header>
   ${resume}
   ${refreshCard()}
@@ -808,6 +807,15 @@ async function saveBuild(btn){
 }
 
 /* ---------- my gym sheet ---------- */
+function settingsSheet(){
+  const fig=figKind();
+  openSheet(`<div class="stack-l settings"><div><div class="eyebrow">Settings</div><h2>Your set-up</h2></div>
+    <section class="card"><h3>Body map figure</h3><p class="small muted" style="margin:0 0 10px">Which body the muscle maps are drawn on.</p>
+      <div class="seg figpick" role="group" aria-label="Which figure to show"><button class="${fig==="male"?"on":""}" data-act="figure" data-v="male" aria-pressed="${fig==="male"}">Male</button><button class="${fig==="female"?"on":""}" data-act="figure" data-v="female" aria-pressed="${fig==="female"}">Female</button></div></section>
+    <button class="btn block" data-act="gym" data-from="settings">My gym · equipment</button>
+    <button class="btn block" data-act="settings-sync">Backup &amp; sync</button>
+    <button class="btn ghost block" data-act="close-sheet">Done</button></div>`);
+}
 function gymSheet(){
   const keys=allEqKeys(), g=gymSet()||new Set(keys), nOn=keys.filter(k=>g.has(k)).length, all=nOn===keys.length, ce=customEquip();
   let sw=0, miss=0; planDays().forEach(d=>{ const r=resolveDay(d); sw+=Object.keys(r.swaps).length; miss+=r.missing.length; });
@@ -1016,7 +1024,7 @@ function liftView(day,idx){
       <div class="howbody">${figCard(id)}${howTo(id)}</div>
     </details>
     <div class="navrow"><button class="btn" data-act="${idx===0?"step":"goto"}" data-i="${idx===0?0:idx-1}">← Back</button><button class="btn" data-act="${isLast?"step":"goto"}" data-i="${isLast?2:idx+1}">${isLast?"Stretch":"Skip ahead"} →</button></div>
-    ${free&&isLast&&!w.sets.some(s=>s.ex===id&&!s.done)?"":`<button class="btn block" data-act="add-ex">+ Add exercise</button>`}`;
+    ${free&&isLast&&!w.sets.some(s=>s.ex===id&&!s.done)?`<button class="btn block" data-act="add-ss" data-ex="${id}">⇄ Add a superset to ${esc(e.n)}</button>`:`<div class="row addrow"><button class="btn" data-act="add-ex">+ Add exercise</button><button class="btn" data-act="add-ss" data-ex="${id}" aria-label="Add an exercise as a superset with ${esc(e.n)}">⇄ Superset</button></div>`}`;
 }
 function swapNote(w,id,idx){
   const orig=w.swaps?.[id];
@@ -1066,6 +1074,13 @@ function togglePair(i){
   if(ga&&ga===gb){ const ia=ga.indexOf(a), left=ga.slice(0,ia+1), right=ga.slice(ia+1); gs=gs.filter(g=>g!==ga); if(left.length>1) gs.push(left); if(right.length>1) gs.push(right); }
   else { const merged=[...(ga||[a]),...(gb||[b])]; gs=gs.filter(g=>g!==ga&&g!==gb); gs.push(merged); }
   w.groups=gs; cleanGroups(w); sessionListSheet(); saveActiveSoon();
+}
+/* changing the weight (or reps) of the set you're on also changes the later sets of that exercise
+   that were still at the old value, so 6 → 8 kg on set 1 makes sets 2 and 3 start at 8 too */
+function carryForward(s,f,old){
+  const later=S.active.sets.filter(x=>x.ex===s.ex&&!x.done&&x!==s), i=S.active.sets.indexOf(s);
+  later.forEach(x=>{ if(S.active.sets.indexOf(x)>i&&(x[f]===""||+x[f]===+old)){ x[f]=s[f]; if(f==="w") x.pw=s[f]; } });
+  if(f==="w") s.pw=s[f];
 }
 function stepper(s,f,label){
   return `<div class="stepper"><div class="ctl"><button data-act="nudge" data-k="${s.k}" data-f="${f}" data-d="-1" aria-label="Decrease ${label}">−</button>
@@ -1134,7 +1149,7 @@ function viewLearn(){
   return `<header class="top"><div class="spread"><div class="eyebrow">Last 7 days</div><button class="pill" data-act="lib">Exercise library</button></div><h1 class="hello">Your body this week</h1>
     <p class="muted small">Every set you log, fading out a day at a time. Green is the right amount for your phase (${esc(band.ph.name.toLowerCase())}).</p></header>
     <div class="figcard big">${bodyFig(statusLevels(st),{tap:true,sel:sel?[sel]:[]})}${loadLegend()}
-      <div class="seg figpick" role="group" aria-label="Which figure to show"><button class="${figKind()==="male"?"on":""}" data-act="figure" data-v="male" aria-pressed="${figKind()==="male"}">Male figure</button><button class="${figKind()==="female"?"on":""}" data-act="figure" data-v="female" aria-pressed="${figKind()==="female"}">Female figure</button></div></div>
+</div>
     ${insightLines(bodyInsight(st))}
     ${panel}
     ${muscleGuide()}
@@ -1239,7 +1254,7 @@ function libRender(){
   const pick=L.mode==="pick";
   const chips=[["","All"],...LGROUPS.map(x=>[x,x])].map(([k,n])=>`<button class="pill ${L.grp===k?"on":""}" data-act="lib-grp" data-g="${k}" aria-pressed="${L.grp===k}">${n}</button>`).join("");
   openSheet(`<div class="stack-l">
-    <div><div class="eyebrow">${pick?(S.replaceIdx!=null?"Swap":"Add to this workout"):"Learn"}</div><h2>${pick?(S.replaceIdx!=null?"Pick the replacement":"Add an exercise"):"Exercise library"}</h2></div>
+    <div><div class="eyebrow">${pick?(S.replaceIdx!=null?"Swap":S.ssWith?"Superset":"Add to this workout"):"Learn"}</div><h2>${pick?(S.replaceIdx!=null?"Pick the replacement":S.ssWith&&EX[S.ssWith]?"Pair with "+esc(EX[S.ssWith].n):"Add an exercise"):"Exercise library"}</h2>${pick&&S.ssWith?`<p class="small muted" style="margin:4px 0 0">It goes straight after, with the same number of sets. You'll alternate between them and rest after each round.</p>`:""}</div>
     <input id="lib-q" type="search" data-act="lib-q" value="${esc(L.q)}" placeholder="Search, e.g. lat pulldown" aria-label="Search exercises" autocomplete="off">
     <div class="libchips" role="group" aria-label="Filter by muscle">${chips}</div>
     ${gymSet()?`<button class="tick toggle ${L.mine?"on":""}" data-act="lib-mine"><span class="box"></span><span class="tt"><span>Only what my gym has</span><small>Uses your My gym list</small></span></button>`:""}
@@ -1278,7 +1293,17 @@ function addToSession(kind,k){
   const list=sessionDay(w).ex;
   if(list.includes(id)){ S.replaceIdx=null; closeSheet(); go(()=>{ S.step=1; S.exIdx=list.indexOf(id); S.hint=""; }); toast("Already in this workout"); return; }
   if(S.replaceIdx!=null){ const i=S.replaceIdx; S.replaceIdx=null; replaceEx(i,id); return; }
-  const ph=phaseFor(currentWeek());
+  const ph=phaseFor(currentWeek()), ssWith=S.ssWith; S.ssWith=null;
+  if(ssWith&&list.includes(ssWith)){
+    /* superset: put it straight after the partner, match its number of sets, pair them */
+    const at=list.indexOf(ssWith)+1, n=Math.max(1,w.sets.filter(x=>x.ex===ssWith).length);
+    w.exList=[...list.slice(0,at),id,...list.slice(at)];
+    w.sets.push(...plannedSets(id,n));
+    w.groups=w.groups||[]; const g=w.groups.find(g=>g.includes(ssWith)); if(g) g.push(id); else w.groups.push([ssWith,id]); cleanGroups(w);
+    closeSheet();
+    go(()=>{ S.step=1; S.exIdx=at; S.hint=""; });
+    saveActiveSoon(); toast(`${e.n} added as a superset`); return;
+  }
   w.exList=[...list,id];
   w.sets.push(...plannedSets(id,ph.sets));
   closeSheet();
@@ -1509,7 +1534,8 @@ document.addEventListener("click",async ev=>{
   else if(a==="photo-zoom"){ zoomOpen(b.dataset.lib,+b.dataset.i); }
   else if(a==="zoom-close"){ zoomClose(); }
   else if(a==="lib"){ libSheet({mode:"browse"}); }
-  else if(a==="add-ex"){ if(S.active){ S.replaceIdx=null; const pl=S.active.plan||[]; libSheet({mode:"pick",grp:pl.length===1?pl[0]:""}); } }
+  else if(a==="add-ex"){ if(S.active){ S.replaceIdx=null; S.ssWith=null; const pl=S.active.plan||[]; libSheet({mode:"pick",grp:pl.length===1?pl[0]:""}); } }
+  else if(a==="add-ss"){ if(S.active){ S.replaceIdx=null; S.ssWith=b.dataset.ex; libSheet({mode:"pick"}); } }
   else if(a==="lib-grp"&&S.lib){ S.lib.grp=b.dataset.g; S.lib.n=40; libRender(); }
   else if(a==="lib-mine"&&S.lib){ S.lib.mine=!S.lib.mine; S.lib.n=40; libRender(); }
   else if(a==="lib-more"&&S.lib){ S.lib.n+=40; libUpdate(); }
@@ -1545,7 +1571,7 @@ document.addEventListener("click",async ev=>{
   else if(a==="swap-lib"){ S.replaceIdx=+b.dataset.i; libSheet({mode:"pick"}); }
   else if(a==="close-sheet"){ S.edit=null; closeSheet(); }
   else if(a==="m-learn"){ muscleSheet(b.dataset.m); }
-  else if(a==="figure"){ if(await saveSettings({figure:b.dataset.v})) render(); }
+  else if(a==="figure"){ if(await saveSettings({figure:b.dataset.v})){ render(); if(!$("#sheet").hidden&&$("#sheet .settings")) settingsSheet(); } }
   else if(a==="muscle"){ const keys=Object.keys(SLUG).filter(k=>(SLUG[k][b.dataset.side==="front"?"f":"b"]||[]).includes(b.dataset.slug)); S.selMuscle=keys.length>1&&keys.includes(S.selMuscle)?keys[(keys.indexOf(S.selMuscle)+1)%keys.length]:keys[0]; render(); }
   else if(a==="step"){ if(b.dataset.close) closeSheet(); if(+b.dataset.i!==1) stopRest(); go(()=>{ S.step=+b.dataset.i; if(S.step===1&&S.exIdx>=sessionDay(S.active).ex.length) S.exIdx=0; }); }
   else if(a==="goto"){ if(b.dataset.close) closeSheet(); go(()=>{ S.step=1; S.exIdx=Math.max(0,+b.dataset.i); S.hint=""; }); }
@@ -1553,7 +1579,7 @@ document.addEventListener("click",async ev=>{
   else if(a==="s-move"){ moveEx(+b.dataset.i,+b.dataset.d); }
   else if(a==="s-pair"){ togglePair(+b.dataset.i); }
   else if(a==="s-rm"){ if(b.dataset.confirm!=="1"){ b.dataset.confirm="1"; b.textContent="?"; b.classList.add("warn"); setTimeout(()=>{ if(b.isConnected){ b.dataset.confirm=""; b.textContent="×"; b.classList.remove("warn"); } },2500); return; } removeEx(+b.dataset.i); }
-  else if(a==="setw"){ const s=S.active.sets.find(x=>x.k===b.dataset.k); if(s){ s.w=+b.dataset.v; updateLogger(); saveActiveSoon(); } }
+  else if(a==="setw"){ const s=S.active.sets.find(x=>x.k===b.dataset.k); if(s){ const old=s.w; s.w=+b.dataset.v; carryForward(s,"w",old); updateLogger(); saveActiveSoon(); } }
   else if(a==="warm"||a==="cool"){ const o=S.active[a]=S.active[a]||{}; o[b.dataset.k]=!o[b.dataset.k]; b.classList.toggle("on",!!o[b.dataset.k]); const sc=b.closest(".stcard"); if(sc){ const sm=$("#stretchmap"); if(sm) sm.outerHTML=stretchMap(S.active,coolDownFor(S.active)); sc.classList.toggle("on",!!o[b.dataset.k]); const l=b.querySelector("span:last-child"); if(l) l.textContent=o[b.dataset.k]?"Done":"Mark done"; } saveActiveSoon(); }
   else if(a==="hold"){ startRest(40,"Hold · "+(b.dataset.n||"stretch"),"Breathe slowly, both sides"); }
   else if(a==="rpe"){ S.active.rpe=+b.dataset.v; document.querySelectorAll('[data-act="rpe"]').forEach(x=>x.classList.toggle("on",x===b)); saveActiveSoon(); }
@@ -1566,7 +1592,7 @@ document.addEventListener("click",async ev=>{
   else if(a==="nudge"){
     const s=S.active.sets.find(x=>x.k===b.dataset.k), e=EX[s.ex], f=b.dataset.f, d=+b.dataset.d;
     const step=f==="w"?wStep(s.ex):(e.timed?5:1);
-    const v=Math.max(0,+((parseFloat(s[f])||0)+d*step).toFixed(1)); s[f]=v;
+    const old=s[f], v=Math.max(0,+((parseFloat(s[f])||0)+d*step).toFixed(1)); s[f]=v; carryForward(s,f,old);
     const inp=document.getElementById(`s-${s.k}-${f}`); if(inp) inp.value=v;
     if(f==="w"){ const tot=document.getElementById(`tot-${s.k}`); if(tot) tot.textContent=fmtKg(v*2)+" kg"; else if(perHand(e)) updateLogger(); }
     saveActiveSoon();
@@ -1605,7 +1631,15 @@ document.addEventListener("click",async ev=>{
     startRest(e.rest,"Rest",nextTxt);
     updateLogger(); clearTimeout(saveT); saveActive();
   }
-  else if(a==="add-set"){ const id=b.dataset.ex, prev=S.active.sets.filter(x=>x.ex===id).at(-1); const ns={k:uid(),ex:id,w:prev?prev.w:"",r:prev?prev.r:"",rir:"",done:false}; S.active.sets.splice(prev?S.active.sets.lastIndexOf(prev)+1:S.active.sets.length,0,ns); updateLogger(); saveActiveSoon(); }
+  else if(a==="add-set"){
+    const id=b.dataset.ex, grp=groupOf(id), n=S.active.sets.filter(x=>x.ex===id).length+1;
+    const addOne=x=>{ const prev=S.active.sets.filter(y=>y.ex===x).at(-1); const ns={k:uid(),ex:x,w:prev?prev.w:"",r:prev?prev.r:"",pw:prev?prev.w:"",rir:"",done:false}; S.active.sets.splice(prev?S.active.sets.lastIndexOf(prev)+1:S.active.sets.length,0,ns); };
+    addOne(id);
+    /* supersets go in rounds: partners with fewer sets get one more so every round stays complete */
+    const mates=(grp||[]).filter(x=>x!==id&&S.active.sets.filter(y=>y.ex===x).length<n);
+    mates.forEach(addOne);
+    updateLogger(); saveActiveSoon(); if(mates.length) toast(`Added a set to the superset (${mates.map(x=>EX[x]?.n).join(", ")} too)`);
+  }
   else if(a==="del-set"){ const id=b.dataset.ex, last=S.active.sets.filter(x=>x.ex===id&&!x.done).at(-1); if(last) S.active.sets=S.active.sets.filter(x=>x!==last); updateLogger(); saveActiveSoon(); }
   else if(a==="cancel-session"){
     if(b.dataset.confirm!=="1"){ b.dataset.confirm="1"; b.textContent="Tap again to discard"; setTimeout(()=>{b.dataset.confirm="";b.textContent="Discard workout";},3000); return; }
@@ -1663,9 +1697,11 @@ document.addEventListener("click",async ev=>{
   else if(a==="checkin"){ saveCheckin(b); }
   /* my gym */
   else if(a==="gym"){ S.gymFrom=b.dataset.from||""; gymSheet(); sheetTop(); }
+  else if(a==="settings"){ settingsSheet(); sheetTop(); }
+  else if(a==="settings-sync"){ closeSheet(); go(()=>{ S.view="progress"; S.paused=!!S.active; }); setTimeout(()=>($("#acct-email")||$("[data-act=sync-now]"))?.scrollIntoView({behavior:"smooth",block:"center"}),350); }
   else if(a==="gym-t"){ const keys=allEqKeys(), g=gymSet()||new Set(keys), k=b.dataset.k; g.has(k)?g.delete(k):g.add(k); setGym(keys.filter(x=>g.has(x))); }
   else if(a==="gym-all"){ const keys=allEqKeys(), g=gymSet(); setGym(g&&keys.every(k=>g.has(k))?[]:keys); }
-  else if(a==="gym-done"){ if(gymT){ clearTimeout(gymT); gymT=null; writeSettings(); } if(S.gymFrom==="pick"){ pickDaySheet(); sheetTop(); } else closeSheet(); render(); }
+  else if(a==="gym-done"){ if(gymT){ clearTimeout(gymT); gymT=null; writeSettings(); } if(S.gymFrom==="pick"){ pickDaySheet(); sheetTop(); } else if(S.gymFrom==="settings"){ settingsSheet(); sheetTop(); } else closeSheet(); render(); }
   /* my workouts */
   else if(a==="cd-new"){ if(canSave()) openBuilder(null); }
   else if(a==="cd-edit"){ const d=dayById(b.dataset.id); if(d&&canSave()) openBuilder(d); }
@@ -1698,7 +1734,7 @@ document.addEventListener("click",async ev=>{
 });
 document.addEventListener("input",ev=>{
   const t=ev.target, a=t.dataset?.act;
-  if(a==="set"){ const s=S.active.sets.find(x=>x.k===t.dataset.k); s[t.dataset.f]=t.value; saveActiveSoon(); }
+  if(a==="set"){ const s=S.active.sets.find(x=>x.k===t.dataset.k), old=s[t.dataset.f]; s[t.dataset.f]=t.value; carryForward(s,t.dataset.f,old); saveActiveSoon(); }
   else if(a==="field"){ S.active[t.dataset.k]=t.value; saveActiveSoon(); }
   else if(a==="ed-set"&&S.edit){ const x=S.edit.sets.find(y=>y.k===t.dataset.k); if(x) x[t.dataset.f]=t.value; }
   else if(a==="ed-notes"&&S.edit){ S.edit.notes=t.value; }

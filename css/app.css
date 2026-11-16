@@ -379,7 +379,7 @@ code{font-family:ui-monospace,Menlo,monospace;font-size:12px;background:var(--bg
 .howthumbs .figs.mini .fig{max-height:44px}
 .howtxt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
 .howtxt b{font-family:var(--f-display);font-size:16px}
-.howtxt span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.howtxt span{white-space:normal}
 .howbox .chev{color:var(--faint);font-size:22px;transform:rotate(90deg);transition:transform .2s;flex:none}
 .howbox[open] .chev{transform:rotate(-90deg)}
 .howbody{display:flex;flex-direction:column;gap:14px;padding:0 14px 16px}
@@ -661,3 +661,5 @@ input,select,textarea{border:0;background:var(--bg2);border-radius:16px}
 .mtip{background:var(--mint);border-radius:22px;padding:14px 18px}
 .mguide .swaprow{border-radius:20px}
 .figpick{margin:6px auto 0}
+.addrow{display:grid;grid-template-columns:1fr auto;gap:8px}
+.settings .card h3{margin:0 0 4px}
