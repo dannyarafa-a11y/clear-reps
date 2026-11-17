@@ -551,6 +551,7 @@ function fillFor(v){
    settings.figure picks the male or female drawing (Body tab). */
 /* a rounded skull under each head: the drawings' heads were cut flat where the hair used to be,
    and the female back view has no head shape of its own */
+let figN=0;
 const SKULL={Mfront:[364,170,64,80],Mback:[1084,172,62,78],Ffront:[320,166,62,84],Fback:[1142,166,66,80]};
 const figKind = () => S.settings?.figure==="female"?"female":"male";
 function bodyFig(levels,{tap=false,cls="",sel=[]}={}){
@@ -560,15 +561,15 @@ function bodyFig(levels,{tap=false,cls="",sel=[]}={}){
   const side=(key,vb0,lv,ss)=>{
     const vb=fem?B.vb[key]:vb0, [vx,vy,vw,vh]=vb.split(" ").map(Number);
     const parts=Object.entries(B[key]).map(([slug,ps])=>{
-      if(slug==="hair") return ""; /* no hair on either figure */
-      if(slug==="head"&&fem&&key==="front") return ""; /* its outline traced the hair; the plain skull below replaces it */
+      if(slug==="hair"||slug==="head"||slug==="neck") return ""; /* the head is drawn as one clean shape instead */
       const deco=SKIP.has(slug), v=deco?0:lv[slug];
       const st=deco?'fill="var(--m-skin)"':`style="fill:${fillFor(v)}"`;
       const on=[!deco&&v?"lit":"",v==="hot"?"hot":"",ss.has(slug)?"sel":"",deco?"":"mus"].filter(Boolean).join(" ");
       const t=tap&&!deco?` data-act="muscle" data-slug="${slug}" data-side="${key}"`:"";
       return `<g class="${on}"${t}>${ps.map(d=>`<path d="${d}" ${st}/>`).join("")}</g>`;
     }).join("");
-    return `<svg class="fig" viewBox="${vb}" aria-hidden="true"><ellipse cx="${vx+vw/2}" cy="${vy+vh-16}" rx="170" ry="13" fill="var(--m-shadow)"/><path d="${B.outline[key]}" fill="var(--m-skin)" stroke="var(--m-line)" stroke-width="2.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>${(()=>{ const h=SKULL[(fem?"F":"M")+key]; return `<ellipse cx="${h[0]}" cy="${h[1]}" rx="${h[2]}" ry="${h[3]}" fill="var(--m-skin)" stroke="var(--m-line)" stroke-width="2.5" vector-effect="non-scaling-stroke"/>`; })()}${parts}</svg>`;
+    const h=SKULL[(fem?"F":"M")+key], cut=h[1]+h[3]*.6, cid="fc"+(++figN);
+    return `<svg class="fig" viewBox="${vb}" aria-hidden="true"><defs><clipPath id="${cid}"><rect x="${vx-50}" y="${cut}" width="${vw+100}" height="${vh+200}"/></clipPath></defs><ellipse cx="${vx+vw/2}" cy="${vy+vh-16}" rx="170" ry="13" fill="var(--m-shadow)"/><path d="${B.outline[key]}" clip-path="url(#${cid})" fill="var(--m-skin)" stroke="var(--m-line)" stroke-width="2.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>${parts}<ellipse cx="${h[0]}" cy="${h[1]}" rx="${h[2]}" ry="${h[3]}" fill="var(--m-skin)" stroke="var(--m-line)" stroke-width="2.5" vector-effect="non-scaling-stroke"/></svg>`;
   };
   const names=Object.keys(levels).filter(k=>levels[k]&&levels[k]!=="plan").map(k=>MUSCLES[k]?.n).filter(Boolean);
   return `<div class="figs ${cls}" role="img" aria-label="${esc(names.length?"Highlighted: "+names.join(", "):"Body diagram")}">
