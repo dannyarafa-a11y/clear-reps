@@ -663,3 +663,12 @@ input,select,textarea{border:0;background:var(--bg2);border-radius:16px}
 .figpick{margin:6px auto 0}
 .addrow{display:grid;grid-template-columns:1fr auto;gap:8px}
 .settings .card h3{margin:0 0 4px}
+/* celebration */
+.confetti{position:absolute;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.confetti i{position:absolute;top:-14px;width:8px;height:12px;border-radius:2px;opacity:0;animation:conf 1.8s cubic-bezier(.2,.6,.4,1) forwards}
+@keyframes conf{0%{opacity:1;transform:translate(0,0) rotate(0)}100%{opacity:0;transform:translate(var(--dx),340px) rotate(var(--r))}}
+@media (prefers-reduced-motion:reduce){.confetti{display:none}}
+/* readiness */
+.ready-card{gap:6px}
+.ready-card .ready b{font-size:15px}
+.ready-card.r-easy{background:#FFF1D6} .ready-card.r-go{background:#E3F6EC}

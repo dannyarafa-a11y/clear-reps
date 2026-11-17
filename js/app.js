@@ -386,6 +386,19 @@ async function writeSettings(){
   try{ await Store.putSettings(JSON.parse(JSON.stringify(S.settings||{}))); return true; }
   catch(e){ toast("Couldn't save. Try again."); return false; }
 }
+/* Danny's own gym, from his "Gym Equipment List" sheet (Nov 2026). Applied once on each device;
+   after that My gym is his to edit. Standard items cover most of it; the rest are named machines. */
+const MY_GYM_V="2026-11";
+const MY_GYM_EXTRA=[["g_isoincline","Iso-lateral incline chest press"],["g_lyingpress","Lying chest press (plate-loaded)"],["g_convpress","Converging chest press"],
+  ["g_dipmachine","Seated dip machine"],["g_curlmachine","Biceps curl machine"],["g_preacher","Preacher curl (plate-loaded)"],["g_isopull","Iso-lateral pulldown / high row"],
+  ["g_csrow","Chest-supported row"],["g_adductor","Hip adductor"],["g_abductor","Hip abductor"],["g_seatedcalf","Seated calf raise"],["g_abcrunch","Ab crunch machine"],
+  ["g_functional","Functional trainer (two pulleys)"],["g_rower","Rowing machine (Concept2)"],["g_plyo","Plyo box and aerobic step"],["g_slamball","Slam balls"]];
+async function applyMyGym(){
+  if(!S.settings||S.settings.myGym===MY_GYM_V||S.dbState!=="on"||!S.canWrite) return;
+  const have=new Set(customEquip().map(c=>c.id)), extra=MY_GYM_EXTRA.filter(([id])=>!have.has(id)).map(([id,name])=>({id,name}));
+  const custom=[...customEquip(),...extra];
+  await saveSettings({customEquipment:custom,equipment:[...EQUIP.map(e=>e[0]),...custom.map(c=>c.id)],myGym:MY_GYM_V});
+}
 async function saveSettings(patch){ if(!canSave()) return false; S.settings={...(S.settings||{}),...patch}; return writeSettings(); }
 
 /* ---------- my workouts (custom days) ---------- */
@@ -536,6 +549,9 @@ function fillFor(v){
 /* The figure: skin-toned body (no hair), each muscle drawn as its own shape with a thin gap around it,
    a soft shadow under the feet. `sel` (our muscle keys) outlines those muscles in ink.
    settings.figure picks the male or female drawing (Body tab). */
+/* a rounded skull under each head: the drawings' heads were cut flat where the hair used to be,
+   and the female back view has no head shape of its own */
+const SKULL={Mfront:[364,170,64,80],Mback:[1084,172,62,78],Ffront:[320,166,62,84],Fback:[1142,166,66,80]};
 const figKind = () => S.settings?.figure==="female"?"female":"male";
 function bodyFig(levels,{tap=false,cls="",sel=[]}={}){
   const L=slugLevels(levels), selSl={f:new Set(),b:new Set()};
@@ -545,13 +561,14 @@ function bodyFig(levels,{tap=false,cls="",sel=[]}={}){
     const vb=fem?B.vb[key]:vb0, [vx,vy,vw,vh]=vb.split(" ").map(Number);
     const parts=Object.entries(B[key]).map(([slug,ps])=>{
       if(slug==="hair") return ""; /* no hair on either figure */
+      if(slug==="head"&&fem&&key==="front") return ""; /* its outline traced the hair; the plain skull below replaces it */
       const deco=SKIP.has(slug), v=deco?0:lv[slug];
       const st=deco?'fill="var(--m-skin)"':`style="fill:${fillFor(v)}"`;
       const on=[!deco&&v?"lit":"",v==="hot"?"hot":"",ss.has(slug)?"sel":"",deco?"":"mus"].filter(Boolean).join(" ");
       const t=tap&&!deco?` data-act="muscle" data-slug="${slug}" data-side="${key}"`:"";
       return `<g class="${on}"${t}>${ps.map(d=>`<path d="${d}" ${st}/>`).join("")}</g>`;
     }).join("");
-    return `<svg class="fig" viewBox="${vb}" aria-hidden="true"><ellipse cx="${vx+vw/2}" cy="${vy+vh-16}" rx="170" ry="13" fill="var(--m-shadow)"/><path d="${B.outline[key]}" fill="var(--m-skin)" stroke="var(--m-line)" stroke-width="2.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>${B[key].head?"":`<ellipse cx="1142" cy="166" rx="66" ry="80" fill="var(--m-skin)" stroke="var(--m-line)" stroke-width="2.5" vector-effect="non-scaling-stroke"/>` /* the female back view has no head shape of its own: draw a plain one */}${parts}</svg>`;
+    return `<svg class="fig" viewBox="${vb}" aria-hidden="true"><ellipse cx="${vx+vw/2}" cy="${vy+vh-16}" rx="170" ry="13" fill="var(--m-shadow)"/><path d="${B.outline[key]}" fill="var(--m-skin)" stroke="var(--m-line)" stroke-width="2.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>${(()=>{ const h=SKULL[(fem?"F":"M")+key]; return `<ellipse cx="${h[0]}" cy="${h[1]}" rx="${h[2]}" ry="${h[3]}" fill="var(--m-skin)" stroke="var(--m-line)" stroke-width="2.5" vector-effect="non-scaling-stroke"/>`; })()}${parts}</svg>`;
   };
   const names=Object.keys(levels).filter(k=>levels[k]&&levels[k]!=="plan").map(k=>MUSCLES[k]?.n).filter(Boolean);
   return `<div class="figs ${cls}" role="img" aria-label="${esc(names.length?"Highlighted: "+names.join(", "):"Body diagram")}">
@@ -701,7 +718,7 @@ function viewToday(){
     <button class="link" data-act="pick-day">See the exercises or pick another workout</button>
   </section>
   <div class="tiles">
-    <div class="tile mint"><b class="tl">${usingCustom()?"Your rotation":"Round "+r.round}</b><div class="rdots">${roundDots(r)}</div><span>${r.idx?`${r.idx} down, ${r.len-r.idx} to go.`:"A fresh round."} No deadline.</span></div>
+    <div class="tile mint"><b class="tl">${usingCustom()?"Your rotation":"Round "+r.round}</b><div class="rdots">${roundDots(r)}</div><span>${r.idx?`${r.idx} down, ${r.len-r.idx} to go.`:"A fresh round."} No deadline.${(()=>{ const n=doneWorkouts().filter(x=>daysBetween(x.date,todayISO())<7).length; return n?` <b>${n} ${n===1?"workout":"workouts"} this week</b>, your own included.`:""; })()}</span></div>
     ${winTile}
   </div>
   ${soreCard()}
@@ -936,15 +953,21 @@ function sessionWins(w){
     if(e.inc===0?best(ss)>best(last.sets):(top(ss)>top(last.sets)||(top(ss)===top(last.sets)&&reps(ss)>reps(last.sets)))) up.push(id); });
   return {up,first,n:ids.length};
 }
+/* a short burst of confetti in the plan's colours, for every finished workout */
+function confetti(){
+  const cols=["#FFC94A","#FF9FB6","#8FD9B6","#7FB2FF","#23180F"];
+  return `<div class="confetti" aria-hidden="true">${Array.from({length:26},(_,i)=>`<i style="left:${(i*37)%100}%;background:${cols[i%cols.length]};animation-delay:${(i%9)*.07}s;--dx:${((i*53)%60)-30}px;--r:${(i*47)%360}deg"></i>`).join("")}</div>`;
+}
 function finishView(day){
   const w=S.active, done=(w.sets||[]).filter(s=>s.done);
   const mins=Math.max(1,Math.round((Date.now()-new Date(w.startedAt).getTime())/6e4));
   const wins=sessionWins(w), list=planDays(), pi=list.findIndex(d=>d.id===w.dayId), lastOfRound=pi>=0&&pi===list.length-1;
-  const head=wins.up.length?`${wins.up.length} ${wins.up.length===1?"lift":"lifts"} went up today.`:wins.n&&wins.first===wins.n?"First one in the book.":"You showed up. That counts.";
+  const nWeek=doneWorkouts().filter(x=>x.id!==w.id&&daysBetween(x.date,todayISO())<7).length+1, ord=n=>n+(n%10===1&&n!==11?"st":n%10===2&&n!==12?"nd":n%10===3&&n!==13?"rd":"th");
+  const head=wins.up.length?`${wins.up.length} ${wins.up.length===1?"lift":"lifts"} went up today.`:wins.n&&wins.first===wins.n?"First one in the book.":nWeek>1?`Your ${ord(nWeek)} workout this week.`:"You showed up. That counts.";
   const sub=wins.up.length?`${listAnd(wins.up.slice(0,3).map((id,i)=>i?lc1(EX[id].n):EX[id].n))}${wins.up.length>3?` and ${wins.up.length-3} more`:""}: more weight or more reps than last time.`
     :wins.n&&wins.first===wins.n?"These are your starting numbers. Every workout from here builds on them."
     :"Matching last time is still a win. Turning up again and again is what builds strength.";
-  return `<section class="cele"><div class="eyebrow">${pi>=0&&!day.custom?`Workout ${pi+1} of ${list.length} done`:"Workout done"}${lastOfRound?" · round finished":""}</div>
+  return `<section class="cele">${confetti()}<div class="eyebrow">${pi>=0&&!day.custom?`Workout ${pi+1} of ${list.length} done`:w.dayId==="free"?"Your own workout, done":"Workout done"}${lastOfRound?" · round finished":""}</div>
       <h1 class="title">${esc(head)}</h1><p>${esc(sub)}</p>
       <div class="cele-stats"><div><b class="num">${mins}</b><span>${mins===1?"minute":"minutes"}</span></div><div><b class="num">${done.length}</b><span>${done.length===1?"set":"sets"}</span></div><div><b class="num">${new Set(done.map(s=>s.ex)).size}</b><span>${new Set(done.map(s=>s.ex)).size===1?"move":"moves"}</span></div></div></section>
     ${(()=>{ const h=sessionHR(w,Date.now()); return h?`<div class="hrline"><span class="heart">♥</span><span>Heart rate <b class="num">avg ${h.avg}</b> <span class="muted">·</span> <b class="num">peak ${h.max}</b> <span class="muted small">bpm</span></span></div>`:""; })()}
@@ -1650,7 +1673,8 @@ document.addEventListener("click",async ev=>{
     w.sets=w.sets.filter(s=>s.done);
     if(w.dayId==="free") w.dayName=freeName(w);
     await saveActive(); S.workouts=[w,...S.workouts.filter(x=>x.id!==w.id)]; S.active=null; S.paused=false; S.step=0; stopRest(); try{wake?.release();}catch(e){}
-    go(()=>{}); toast("Saved. See you next time.");
+    const nW=doneWorkouts().filter(x=>daysBetween(x.date,todayISO())<7).length;
+    go(()=>{}); toast(nW>1?`Saved. That's ${nW} workouts this week 🎉`:"Saved. Nice work 🎉");
   }
   else if(a==="ask-ex"){ closeSheet(); go(()=>{ S.coachFocus=b.dataset.ex; S.paused=!!S.active; S.view="coach"; }); }
   else if(a==="ask"){ askCoach(b.dataset.q); }
@@ -1803,16 +1827,18 @@ function readiness(){
   return {k,msg,sleep,rhr,delta,steps:stepsDay?+stepsDay.steps:null};
 }
 function healthStrip(){
-  if(S.health.state==="loading"&&!S.health.days.length) return `<div class="health muted small">Checking Apple Health…</div>`;
+  if(S.health.state==="loading"&&!S.health.days.length) return "";
   if(S.health.state==="off"||S.health.state==="error") return "";
   const r=readiness();
-  if(!r) return `<button class="health setup" data-act="health-setup"><span><b>Connect Apple Health</b><br><span class="muted small">Sleep, heart rate and steps from your watch, every day</span></span><span class="go">Set up →</span></button>`;
-  const f=(v,u,d=0)=>v==null?"–":`${(+v).toFixed(d)}<small>${u}</small>`;
-  return `<div class="health"><div class="hstats">
-      <div><b class="num">${f(r.sleep,"h",1)}</b><span>Sleep</span></div>
-      <div><b class="num">${f(r.rhr,"bpm")}</b><span>Resting HR${r.delta!=null&&Math.abs(r.delta)>=1?` <em class="${r.delta>0?"up":"dn"}">${r.delta>0?"+":""}${r.delta.toFixed(0)}</em>`:""}</span></div>
-      <div><b class="num">${r.steps==null?"–":(+r.steps).toLocaleString()}</b><span>Steps</span></div></div>
-    <div class="ready r-${r.k}"><i></i>${esc(r.msg)}</div></div>`;
+  if(!r) return `<button class="health setup" data-act="health-setup"><span><b>Connect Apple Health</b><br><span class="muted small">Your sleep and resting heart rate can tune each workout</span></span><span class="go">Set up →</span></button>`;
+  if(r.k==="stale") return `<p class="tiny muted center" style="margin:0">No watch data since yesterday. The plan runs as normal.</p>`;
+  const t=todayISO(), usualSleep=avgOf(S.health.days.filter(d=>d.sleep_hours!=null&&daysBetween(d.day,t)>1&&daysBetween(d.day,t)<=15).map(d=>+d.sleep_hours));
+  const why=[];
+  if(r.sleep!=null) why.push(`slept ${(+r.sleep).toFixed(1)} h${usualSleep?` (usual ${usualSleep.toFixed(1)})`:""}`);
+  if(r.rhr!=null) why.push(`resting heart rate ${Math.round(r.rhr)}${r.delta!=null?(Math.abs(r.delta)<2?", normal for you":r.delta>0?`, ${Math.round(r.delta)} above your usual`:`, ${Math.round(-r.delta)} below your usual`):""}`);
+  const head={easy:"Take it a bit easier today",go:"Well rested: a good day to push",ok:"Recovery looks normal"}[r.k];
+  const act={easy:"The plan already trims the last two exercises. Stop sets at Good, not Tough.",go:"Go for the extra rep on your last set.",ok:"Follow the targets as they are."}[r.k];
+  return `<div class="health ready-card r-${r.k}"><div class="ready"><i></i><b>${head}</b></div><p class="small" style="margin:0">${esc(act)}</p>${why.length?`<p class="tiny muted" style="margin:0">From your watch: ${esc(why.join(" · "))}.</p>`:""}</div>`;
 }
 /* per-minute heart rate from health_hr, as [epochSeconds,bpm] */
 function cleanHR(a){
@@ -2086,6 +2112,7 @@ render();
   takeWorkouts(await Store.list("workouts"));
   S.checkins=await Store.list("checkins"); hydratePhotoUrls();
   S.dbState="on"; render();
+  setTimeout(applyMyGym,1500);
   /* live updates (sync from another device, imports): never redraw mid-set */
   Store.subscribe("settings",s=>{ S.settings=s; applyCustomEx(); applyBlock(); if(!inSession()) render(); });
   Store.subscribe("workouts",list=>{ const was=inSession(); takeWorkouts(list); if(!inSession()||!was) render(); });

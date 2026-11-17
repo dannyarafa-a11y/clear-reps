@@ -93,6 +93,11 @@ muscles). Male or female figure: `settings.figure`, switch on the Body tab; `BOD
 Body tab has "Get to know your muscles": `MUSCLE_INFO` + `muscleSheet` (what it does, how it feels,
 exercises and stretches for it).
 
+v3.2.0: Danny's real gym loaded once from his "Gym Equipment List" Sheet (`applyMyGym`, `MY_GYM_EXTRA`,
+`settings.myGym`); confetti and "Nth workout this week" on every finish, own workouts included; Home round tile
+counts all workouts this week; Apple Health shown as one readiness message against his own usual (`healthStrip`);
+rounded skull on both figures (`SKULL`), heads were cut flat where hair was removed.
+
 v3.1.0: weight/reps changes carry to later sets (`carryForward`); "⇄ Superset" button next to
 Add exercise (`S.ssWith`); adding a set in a superset adds one to partners; Settings sheet (gear on Home)
 holds the male/female figure, My gym, Backup & sync; cues are no longer cut off.
