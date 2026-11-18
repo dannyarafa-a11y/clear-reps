@@ -229,6 +229,9 @@ const MY_MACHINE_ALTS={incline:["m_isoincline"],dbbench:["m_convpress","m_isoinc
   calf:["m_seatedcalf"],slcalf:["m_seatedcalf"],plank:["m_abcrunch"],deadbug:["m_abcrunch"],hipthrust:["m_abductor"],glutebridge:["m_abductor"]};
 Object.entries(MY_MACHINE_ALTS).forEach(([k,list])=>{ if(EX[k]) EX[k].alts=[...list,...(EX[k].alts||[])]; });
 const HOME_DAYS = {
+ A:{ex:["h_squat","h_split","h_hamwalk","h_slbridge","h_pike","h_ytw","h_calf"],warm:HOME_WARM},
+ B:{ex:["h_pushup","h_decline","h_widepush","h_chairdip","h_towelcurl","h_closepush","h_tablecurl"],warm:HOME_WARM},
+ C:{ex:["h_tablerow","h_doorrow","h_snow","h_thrust","h_superman","plank","deadbug","h_sideplank"],warm:HOME_WARM},
  "1":{ex:["h_squat","h_pushup","h_tablerow","h_ytw","h_towelcurl"],warm:HOME_WARM},
  "2":{ex:["h_hamwalk","h_pike","h_doorrow","h_chairdip","plank"],warm:HOME_WARM},
  "3":{ex:["h_split","h_decline","h_tablerow","h_thrust","h_snow"],warm:HOME_WARM},
@@ -327,10 +330,25 @@ const BLOCKS=[
   "4":["rdl","shpress","cablerow","calf","plank"]}
 ];
 const ROUND_LEN=4, MAIN_LIFTS=3, REFRESH_ROUNDS=6;
+/* the earlier 3-day split, offered in Settings as the other program (settings.split = "abc") */
+const ABC_DAYS=[
+ {id:"A",name:"Legs + Shoulders",ex:["legpress","rdl","lunge","legcurl","shpress","lateral","calf"],
+  warm:["Leg swings, 10 each leg (front-back and side to side)","Bodyweight squats × 10","Glute bridges × 10","Walking lunges × 5 each leg","Arm circles, 10 each way"],cool:FB_COOL},
+ {id:"B",name:"Chest + Arms",ex:["dbbench","incline","pecfly","pushdown","curl","ohext","hammer"],
+  warm:["Arm circles, 10 each way","Band pull-aparts × 15","Incline push-ups × 8","Band shoulder pass-throughs × 10","Wrist circles, 10 each way"],cool:FB_COOL},
+ {id:"C",name:"Back + Glutes + Core",ex:["pulldown","cablerow","dbrow","facepull","hipthrust","backext","plank","deadbug"],
+  warm:["Cat-cow × 8","Band pull-aparts × 15","Dead hang from a bar, 20 seconds","Bird dog × 6 each side","Hip hinge drill with a stick × 10"],cool:FB_COOL}
+];
+const splitKind = () => S.settings?.split==="abc"?"abc":"full4";
 const DAYS = ["1","2","3","4"].map(id=>({id,name:"Full body "+id,ex:[...BLOCKS[0][id]],warm:FB_WARM,cool:FB_COOL}));
 const planBlock = () => { const b=+S.settings?.block||0; return ((b%BLOCKS.length)+BLOCKS.length)%BLOCKS.length; };
 /* point the four days at the current block's exercises (after settings load, and when a refresh is accepted) */
-function applyBlock(){ const B=BLOCKS[planBlock()]; DAYS.forEach(d=>{ d.ex=[...B[d.id]]; }); }
+function applyBlock(){
+  /* DAYS is rebuilt in place for whichever program is chosen */
+  DAYS.length=0;
+  if(splitKind()==="abc") ABC_DAYS.forEach(d=>DAYS.push({...d,ex:[...d.ex]}));
+  else { const B=BLOCKS[planBlock()]; ["1","2","3","4"].forEach(id=>DAYS.push({id,name:"Full body "+id,ex:[...B[id]],warm:FB_WARM,cool:FB_COOL})); }
+}
 
 const BASICS = [
  {t:"How hard is hard enough?",b:"Stop each set when you could still do 1 to 3 more clean reps. Trainers call this reps in reserve, or RIR: RIR 2 means two more were possible. That is hard enough to make progress and far enough from failure that you recover for next time. Easy, Good and Tough are the same idea: Good means 2 or 3 left."},
@@ -462,9 +480,9 @@ function freeName(w){
 const histName = w => (w.dayId==="free"?(w.dayName||"Free session"):(dayById(w.dayId)?.name||w.dayName||"Workout"))+(w.where==="home"?" · at home":"");
 const usingCustom = () => !!S.settings?.useCustom && customDays().some(d=>d.ex.length);
 const planDays = () => usingCustom()?customDays().filter(d=>d.ex.length):DAYS.map(homeDay);
-const dayTag = d => d?.custom?"My workout":`Workout ${d?.id} of ${ROUND_LEN}`;
+const dayTag = d => d?.custom?"My workout":splitKind()==="abc"?`Day ${d?.id} of 3`:`Workout ${d?.id} of ${ROUND_LEN}`;
 /* built-in days: the first three are main lifts (the phase's sets), the rest are finishers (2 at most) */
-const setsFor = (d,id,ph) => (d.custom&&+d.sets?.[id]>0)?+d.sets[id]:(!d.custom&&d.ex.indexOf(id)>=MAIN_LIFTS?Math.min(2,ph.sets):ph.sets);
+const setsFor = (d,id,ph) => (d.custom&&+d.sets?.[id]>0)?+d.sets[id]:(!d.custom&&splitKind()!=="abc"&&d.ex.indexOf(id)>=MAIN_LIFTS?Math.min(2,ph.sets):ph.sets);
 const wLabel = w => { if(w.dayId==="free") return w.dayName||"Free session"; const d=dayById(w.dayId); return d?d.name:(w.dayName||"Workout"); };
 /* the day as it's actually being done: uses the swapped list saved on the workout */
 function sessionDay(w){
@@ -689,7 +707,7 @@ function movesLine(day,ids){
 }
 /* a refresh is offered after about six rounds on the same block; nothing changes unless he says yes */
 function refreshDue(){
-  if(usingCustom()||S.active) return null;
+  if(usingCustom()||S.active||splitKind()==="abc") return null;
   const done=doneWorkouts().filter(w=>DAYS.some(d=>d.id===w.dayId)).length;
   const since=done-(+S.settings?.blockStart||0);
   if(since<REFRESH_ROUNDS*ROUND_LEN||nextDay().id!==DAYS[0].id) return null;
@@ -765,7 +783,8 @@ function dayCard(d,ph,can,nid){
 }
 function pickDaySheet(){
   const ph=phaseFor(currentWeek()), can=S.dbState==="on"&&S.canWrite&&!S.active, nid=nextDay().id, cds=customDays(), uc=usingCustom();
-  const plan=`<div class="stack-l"><div><h3>The plan</h3><p class="muted small">A round of four full-body workouts. Do them in order, whenever you train. The first three moves are the main lifts; the last two are finishers.</p></div>${DAYS.map(d=>dayCard(d,ph,can,nid)).join("")}</div>`;
+  const plan=`<div class="stack-l"><div><h3>The plan</h3><p class="muted small">${splitKind()==="abc"?"A 3-day split: legs and shoulders, chest and arms, back, glutes and core. Do them in order, whenever you train.":"A round of four full-body workouts. Do them in order, whenever you train. The first three moves are the main lifts; the last two are finishers."}</p></div>${DAYS.map(d=>dayCard(d,ph,can,nid)).join("")}
+    <button class="btn block" data-act="split" data-v="${splitKind()==="abc"?"full4":"abc"}">${splitKind()==="abc"?"Switch to the 4 full-body workouts":"Switch to the 3-day split (A / B / C)"}</button></div>`;
   const mine=`<div class="stack-l"><div><h3>My workouts</h3><p class="muted small">${cds.length?"Workouts you made yourself.":"Make your own from any exercises. Handy if your trainer gave you a plan."}</p></div>
     ${cds.map(d=>dayCard(d,ph,can,nid)).join("")}
     <button class="btn block" data-act="cd-new">+ Create a workout</button>
@@ -846,11 +865,20 @@ async function saveBuild(btn){
 }
 
 /* ---------- my gym sheet ---------- */
+const watchRemind = () => S.settings?.watchRemind!==false;
+function watchNote(end){
+  if(!watchRemind()) return "";
+  if(!end&&S.active?.watchOn) return "";
+  return `<div class="watchnote"><span class="wi" aria-hidden="true">⌚</span><div><b>${end?"Stop the workout on your watch":"Start a strength workout on your watch"}</b><p class="tiny muted" style="margin:0">${end?"So the heart-rate recording ends here and lines up with this session.":"Strength Training on the Amazfit. It records your heart rate, and the app lines it up with this session."}</p></div>${end?"":`<button class="pill" data-act="watch-ok">Started</button>`}</div>`;
+}
 function settingsSheet(){
   const fig=figKind();
   openSheet(`<div class="stack-l settings"><div><div class="eyebrow">Settings</div><h2>Your set-up</h2></div>
     <section class="card"><h3>Body map figure</h3><p class="small muted" style="margin:0 0 10px">Which body the muscle maps are drawn on.</p>
       <div class="seg figpick" role="group" aria-label="Which figure to show"><button class="${fig==="male"?"on":""}" data-act="figure" data-v="male" aria-pressed="${fig==="male"}">Male</button><button class="${fig==="female"?"on":""}" data-act="figure" data-v="female" aria-pressed="${fig==="female"}">Female</button></div></section>
+    <section class="card"><h3>Program</h3><p class="small muted" style="margin:0 0 10px">${splitKind()==="abc"?"3 workouts, each on two or three muscle groups.":"4 full-body workouts, each with a leg lift, a push and a pull."} Your history and progress carry over either way.</p>
+      <div class="seg" role="group" aria-label="Which program"><button class="${splitKind()==="full4"?"on":""}" data-act="split" data-v="full4" aria-pressed="${splitKind()==="full4"}">4 full body</button><button class="${splitKind()==="abc"?"on":""}" data-act="split" data-v="abc" aria-pressed="${splitKind()==="abc"}">3-day split</button></div></section>
+    <section class="card"><button class="tick toggle ${watchRemind()?"on":""}" data-act="watch-remind"><span class="box"></span><span class="tt"><span>Watch reminder</span><small>A reminder to start a strength workout on your watch when you begin, and to stop it at the end, so your heart rate is recorded.</small></span></button></section>
     <button class="btn block" data-act="gym" data-from="settings">My gym · equipment</button>
     <button class="btn block" data-act="settings-sync">Backup &amp; sync</button>
     <button class="btn ghost block" data-act="close-sheet">Done</button></div>`);
@@ -893,6 +921,7 @@ function tickList(items,kind){
 function warmView(day){
   const items=[["cardio","5 min easy cardio · bike or incline walk"],...day.warm.map((t,i)=>[String(i),t])];
   return `<section class="stage"><div class="eyebrow">Step 1</div><h1 class="title">Warm up</h1><p class="muted">About 8 minutes. Gets the joints moving so the lifts feel smoother.</p></section>
+    ${watchNote()}
     ${preBrief(S.active,day)}
     ${tickList(items,"warm")}
     <div class="note">First exercise: do 2 light practice sets before your real ones. Don't log them.</div>
@@ -1001,6 +1030,7 @@ function finishView(day){
       <div class="stack-l" style="margin-top:12px"><div class="grid2"><label class="f" for="f-hr">Avg heart rate<input id="f-hr" inputmode="numeric" value="${esc(w.avgHr??"")}" data-act="field" data-k="avgHr" placeholder="bpm"></label>
       <label class="f" for="f-kcal">Calories<input id="f-kcal" inputmode="numeric" value="${esc(w.kcal??"")}" data-act="field" data-k="kcal" placeholder="kcal"></label></div>
       <label class="f" for="f-notes">Note<textarea id="f-notes" data-act="field" data-k="notes" placeholder="e.g. knee felt tight on lunges">${esc(w.notes||"")}</textarea></label></div></details>
+    ${watchNote(true)}
     <div class="dock"><button class="btn primary xl block" data-act="finish">Save workout</button></div>`;
 }
 function emptyLiftView(){
@@ -1764,6 +1794,9 @@ document.addEventListener("click",async ev=>{
   /* my gym */
   else if(a==="gym"){ S.gymFrom=b.dataset.from||""; gymSheet(); sheetTop(); }
   else if(a==="settings"){ settingsSheet(); sheetTop(); }
+  else if(a==="split"){ const v=b.dataset.v; if(splitKind()===v) return; if(S.active){ toast("Finish this workout first"); return; } if(await saveSettings({split:v})){ applyBlock(); render(); if($("#sheet .settings")) settingsSheet(); else if(!$("#sheet").hidden) pickDaySheet(); toast(v==="abc"?"Switched to the 3-day split":"Switched to 4 full-body workouts"); } }
+  else if(a==="watch-remind"){ if(await saveSettings({watchRemind:!watchRemind()})){ settingsSheet(); } }
+  else if(a==="watch-ok"){ if(S.active){ S.active.watchOn=true; saveActiveSoon(); } const c=b.closest(".watchnote"); if(c) c.remove(); }
   else if(a==="settings-sync"){ closeSheet(); go(()=>{ S.view="progress"; S.paused=!!S.active; }); setTimeout(()=>($("#acct-email")||$("[data-act=sync-now]"))?.scrollIntoView({behavior:"smooth",block:"center"}),350); }
   else if(a==="gym-t"){ const keys=allEqKeys(), g=gymSet()||new Set(keys), k=b.dataset.k; g.has(k)?g.delete(k):g.add(k); setGym(keys.filter(x=>g.has(x))); }
   else if(a==="gym-all"){ const keys=allEqKeys(), g=gymSet(); setGym(g&&keys.every(k=>g.has(k))?[]:keys); }

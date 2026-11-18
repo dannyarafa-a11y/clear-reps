@@ -93,6 +93,11 @@ muscles). Male or female figure: `settings.figure`, switch on the Body tab; `BOD
 Body tab has "Get to know your muscles": `MUSCLE_INFO` + `muscleSheet` (what it does, how it feels,
 exercises and stretches for it).
 
+v3.4.0: Settings has Program (`settings.split`: "full4" default, or "abc" = the old A/B/C split in `ABC_DAYS`;
+`applyBlock` rebuilds `DAYS` in place) and a watch reminder (`settings.watchRemind`, default on, `watchNote`)
+shown at warm-up and before saving. `HOME_DAYS` has home versions for both programs. The plan sheet also has a
+switch button.
+
 v3.3.0: exercises for his named machines (`m_*`, need the matching `g_*` item in My gym) are offered first in
 Swap (`MY_MACHINE_ALTS`) and appear in the library and quick picks; anything made easier today is recorded
 (`w.eased`, set `ow` = normal weight) and can be undone per exercise ("Use my normal", `unEase`) or all at once
