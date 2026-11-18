@@ -520,12 +520,14 @@ function targetFor(exId){
   const top=last.sets.filter(s=>(+s.w||0)===w);
   const allTop=top.length>=2 && top.every(s=>(+s.r||0)>=e.r[1]);
   const lastR=Math.min(...top.map(s=>+s.r||0));
+  /* what he actually did, e.g. "15, 15 and 14" */
+  const did=listAnd(top.map(s=>String(+s.r||0)))+u, over=lastR>e.r[1];
   if(e.inc===0){
-    return allTop?{w:0,r:e.r[1],up:true,short:`Beat ${e.r[1]}${u}`,text:"You hit the top last time. Add a little more."}
+    return allTop?{w:0,r:Math.max(e.r[1],lastR),up:true,short:`Beat ${Math.max(e.r[1],lastR)}${u}`,text:`Last time ${did}${over?`, past the ${range} range`:""}. Add a little more.`}
                  :{w:0,r:Math.min(lastR+1,e.r[1]),short:`${Math.min(lastR+1,e.r[1])}${u}`,text:`Last time ${lastR}${u}. One more today.`};
   }
-  if(allTop){ const st=wStep(exId), nw=+(w+st).toFixed(1); return {w:nw,r:e.r[0],up:true,short:`${nw} kg · ${range}`,text:`Up ${st} kg. You hit ${e.r[1]} on every set last time.`}; }
-  return {w,r:Math.min(lastR+1,e.r[1]),short:`${w} kg · ${range}`,text:`Same weight as last time. Try for 1 more rep per set.`};
+  if(allTop){ const st=wStep(exId), nw=+(w+st).toFixed(1); return {w:nw,r:e.r[0],up:true,short:`${nw} kg · ${range}`,text:`Up ${st} kg. Last time you did ${did} reps at ${fmtKg(w)} kg${over?`, past the top of the ${range} range`:`, the top of the ${range} range`}.`}; }
+  return {w,r:Math.min(lastR+1,e.r[1]),short:`${w} kg · ${range}`,text:`Same weight as last time (${did} reps). Try for 1 more rep per set.`};
 }
 const youtube = id => "https://www.youtube.com/results?search_query="+encodeURIComponent(EX[id].n+" proper form");
 
@@ -1104,22 +1106,33 @@ function liftView(day,idx){
     <div class="navrow"><button class="btn" data-act="${idx===0?"step":"goto"}" data-i="${idx===0?0:idx-1}">← Back</button><button class="btn" data-act="${isLast?"step":"goto"}" data-i="${isLast?2:idx+1}">${isLast?"Stretch":"Skip ahead"} →</button></div>
     ${free&&isLast&&!w.sets.some(s=>s.ex===id&&!s.done)?`<button class="btn block" data-act="add-ss" data-ex="${id}">⇄ Add a superset to ${esc(e.n)}</button>`:`<div class="row addrow"><button class="btn" data-act="add-ex">+ Add exercise</button><button class="btn" data-act="add-ss" data-ex="${id}" aria-label="Add an exercise as a superset with ${esc(e.n)}">⇄ Superset</button></div>`}`;
 }
-/* "made easier today" with a way to go back to the normal weight and sets */
+/* "easier today": a small Easier | Normal switch that works both ways */
 function easedLine(w,id){
-  if(w.unEased?.[id]) return "";
-  const todo=w.sets.filter(x=>x.ex===id&&!x.done), lighter=todo.filter(x=>x.ow!=null&&+x.ow>+x.w), ez=w.eased?.[id]||{};
-  const less=ez.sets||0; if(!lighter.length&&!less) return "";
-  const what=[lighter.length?`${fmtKg(lighter[0].w)} kg instead of ${fmtKg(lighter[0].ow)} kg`:"",less?(less===1?"one set less":`${less} sets less`):""].filter(Boolean).join(" and ");
-  const why=(ez.why||[]).length?ez.why.join(" "):"You're easing back in after time off.";
-  return `<div class="eased"><p class="small" style="margin:0"><b>Made easier today:</b> ${esc(what)}.</p><p class="tiny muted" style="margin:0">${esc(why)}</p>
-    <button class="pill" data-act="uneasy" data-ex="${esc(id)}">Use my normal${lighter.length?" weight":""}${less?(lighter.length?" and sets":" sets"):""}</button></div>`;
+  const ez=w.eased?.[id]||{}, todo=w.sets.filter(x=>x.ex===id&&!x.done);
+  const normal=!!w.unEased?.[id];
+  const lw=todo.find(x=>normal?x.ew!=null:x.ow!=null);
+  const less=ez.sets||0;
+  if(!lw&&!less) return "";
+  const easyW=lw?(normal?lw.ew:lw.w):null, normW=lw?(normal?lw.w:lw.ow):null;
+  const easyTxt=[easyW!=null?`${fmtKg(easyW)} kg`:"",less?(less===1?"1 set less":`${less} sets less`):""].filter(Boolean).join(", ");
+  const normTxt=[normW!=null?`${fmtKg(normW)} kg`:"",less?"all sets":""].filter(Boolean).join(", ");
+  const why=(ez.why||[])[0]||"Easing back in after time off.";
+  return `<div class="easebar"><div class="eb-t"><b>${normal?"Normal today":"Easier today"}</b><span>${esc(normal?normTxt:easyTxt)}</span></div>
+    <div class="seg eb-seg" role="group" aria-label="Easier or normal"><button class="${normal?"":"on"}" data-act="ease-set" data-ex="${esc(id)}" data-v="easy" aria-pressed="${!normal}">Easier</button><button class="${normal?"on":""}" data-act="ease-set" data-ex="${esc(id)}" data-v="normal" aria-pressed="${normal}">Normal</button></div>
+    ${normal?"":`<p class="eb-why">${esc(why)}</p>`}</div>`;
 }
 function unEase(id){
-  const w=S.active; if(!w) return;
-  w.sets.filter(x=>x.ex===id&&!x.done&&x.ow!=null).forEach(x=>{ x.w=x.ow; x.pw=x.ow; delete x.ow; });
+  const w=S.active; if(!w||w.unEased?.[id]) return;
+  w.sets.filter(x=>x.ex===id&&!x.done&&x.ow!=null).forEach(x=>{ x.ew=x.w; x.w=x.ow; x.pw=x.ow; delete x.ow; });
   const less=w.eased?.[id]?.sets||0;
-  for(let j=0;j<less;j++){ const prev=w.sets.filter(x=>x.ex===id).at(-1); const ns={k:uid(),ex:id,w:prev?prev.w:"",r:prev?prev.r:"",pw:prev?prev.w:"",rir:"",done:false}; w.sets.splice(prev?w.sets.lastIndexOf(prev)+1:w.sets.length,0,ns); }
+  for(let j=0;j<less;j++){ const prev=w.sets.filter(x=>x.ex===id).at(-1); const ns={k:uid(),ex:id,w:prev?prev.w:"",r:prev?prev.r:"",pw:prev?prev.w:"",rir:"",done:false,addedBack:true}; w.sets.splice(prev?w.sets.lastIndexOf(prev)+1:w.sets.length,0,ns); }
   w.unEased={...(w.unEased||{}),[id]:true};
+}
+function reEase(id){
+  const w=S.active; if(!w||!w.unEased?.[id]) return;
+  w.sets=w.sets.filter(x=>!(x.ex===id&&x.addedBack&&!x.done));
+  w.sets.filter(x=>x.ex===id&&!x.done&&x.ew!=null).forEach(x=>{ x.ow=x.w; x.w=x.ew; x.pw=x.ew; delete x.ew; });
+  delete w.unEased[id];
 }
 function swapNote(w,id,idx){
   const orig=w.swaps?.[id];
@@ -1630,8 +1643,10 @@ document.addEventListener("click",async ev=>{
   else if(a==="zoom-close"){ zoomClose(); }
   else if(a==="lib"){ libSheet({mode:"browse"}); }
   else if(a==="add-ex"){ if(S.active){ S.replaceIdx=null; S.ssWith=null; const pl=S.active.plan||[]; libSheet({mode:"pick",grp:pl.length===1?pl[0]:""}); } }
-  else if(a==="uneasy"){ unEase(b.dataset.ex); render(); saveActiveSoon(); toast("Back to your normal for "+(EX[b.dataset.ex]?.n||"this one")); }
-  else if(a==="uneasy-all"){ Object.keys(S.active?.eased||{}).forEach(unEase); S.active.sets.filter(x=>!x.done&&x.ow!=null).forEach(x=>unEase(x.ex)); render(); saveActiveSoon(); toast("Using your normal weights and sets"); }
+  else if(a==="uneasy"){ unEase(b.dataset.ex); render(); saveActiveSoon(); }
+  else if(a==="ease-set"){ const id=b.dataset.ex; b.dataset.v==="normal"?unEase(id):reEase(id); updateLogger?.(); render(); saveActiveSoon(); }
+  else if(a==="uneasy-all"){ const ids=new Set([...Object.keys(S.active?.eased||{}),...S.active.sets.filter(x=>!x.done&&x.ow!=null).map(x=>x.ex)]);
+    const allNormal=[...ids].every(id=>S.active.unEased?.[id]); ids.forEach(allNormal?reEase:unEase); render(); saveActiveSoon(); toast(allNormal?"Back to the easier plan":"Using your normal weights and sets"); }
   else if(a==="add-ss"){ if(S.active){ S.replaceIdx=null; S.ssWith=b.dataset.ex; libSheet({mode:"pick"}); } }
   else if(a==="lib-grp"&&S.lib){ S.lib.grp=b.dataset.g; S.lib.n=40; libRender(); }
   else if(a==="lib-mine"&&S.lib){ S.lib.mine=!S.lib.mine; S.lib.n=40; libRender(); }

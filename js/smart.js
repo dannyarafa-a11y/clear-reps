@@ -145,7 +145,8 @@ function preBrief(w,day){
   items.push(`<li><b>${esc(ph.name)}:</b> ${free?"":day.custom||ph.sets<3?`${ph.sets} sets each, `:`${ph.sets} sets on the three main lifts, 2 on the finishers, `}stop each set with ${esc(ph.rir)} reps left in the tank. <span class="muted">Trainers call this reps in reserve.</span></li>`);
   (w.learn||[]).forEach(n=>items.push(`<li>${n.t}</li>`));
   const anyEase=Object.keys(w.eased||{}).length||(w.sets||[]).some(x=>!x.done&&x.ow!=null);
-  if(anyEase&&!(w.unEasedAll)) items.push(`<li class="nobullet"><button class="pill" data-act="uneasy-all">Use my normal weights and sets today</button> <span class="muted">You can also undo it per exercise.</span></li>`);
+  if(anyEase){ const ids=new Set([...Object.keys(w.eased||{}),...(w.sets||[]).filter(x=>!x.done&&(x.ow!=null||x.ew!=null)).map(x=>x.ex)]), allNormal=[...ids].every(id=>w.unEased?.[id]);
+    items.push(`<li class="nobullet"><div class="seg eb-seg" role="group" aria-label="Easier or normal for every exercise"><button class="${allNormal?"":"on"}" data-act="uneasy-all" ${allNormal?"":"disabled"}>Easier for all</button><button class="${allNormal?"on":""}" data-act="uneasy-all" ${allNormal?"disabled":""}>Normal for all</button></div></li>`); }
   items.push(...adjustLines(w.adjust));
   const gear=Object.entries(w.swaps||{}).filter(([nw,orig])=>EX[nw]&&EX[orig]&&!(w.userSwaps||{})[nw]);
   if(gear.length) items.push(`<li><b>Swapped for your gym:</b> ${esc(gear.map(([nw,orig])=>`${EX[nw].n} instead of ${EX[orig].n}`).join(", "))}.</li>`);
@@ -179,7 +180,7 @@ function postBrief(w){
     const tough=ss.some(s=>s.feel==="tough"&&(+s.r||0)<e.r[0]), easy=ss.filter(s=>s.feel==="easy").length>=Math.ceil(ss.length/2);
     let next;
     if(bw) next=allTop?`Next time: aim past ${e.r[1]}${u}, you hit the top of the range.`:`Next time: one more ${e.timed?"second or two":"rep"} per set.`;
-    else if(allTop||easy) next=`Next time: ${fmtKg(topW+wStep(id))} kg. ${allTop?`Every set reached ${e.r[1]} reps, the top of the range,`:"Most sets felt easy,"} so it's time to add weight.`;
+    else if(allTop||easy) next=`Next time: ${fmtKg(topW+wStep(id))} kg. ${allTop?`You did ${listAnd(atTop.map(x=>String(+x.r||0)))} reps, at or past the top of the ${e.r[0]}–${e.r[1]} range,`:"Most sets felt easy,"} so it's time to add weight.`;
     else if(tough) next=`Next time: stay at ${fmtKg(topW)} kg. Some sets fell short of ${e.r[0]} reps, so build reps first.`;
     else next=`Next time: ${fmtKg(topW)} kg again, one more rep per set. Weight goes up once every set hits ${e.r[1]}.`;
     const arrow={up:"↑",down:"↓",same:"=",new:"★"}[tag];
