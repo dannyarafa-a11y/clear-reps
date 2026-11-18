@@ -93,6 +93,10 @@ muscles). Male or female figure: `settings.figure`, switch on the Body tab; `BOD
 Body tab has "Get to know your muscles": `MUSCLE_INFO` + `muscleSheet` (what it does, how it feels,
 exercises and stretches for it).
 
+v3.7.0: stretch swaps. Each stretch card has "⇄ Swap"; options share a muscle, from `STRETCHES` plus
+swap-only `STRETCH_EXTRA` (smart.js). The choice is remembered in `settings.stretchPref` {defaultId: preferredId}
+and applied by `applyStretchPrefs` in `coolDownFor`; Settings can reset it.
+
 v3.6.0: first-time exercises get a starting weight from his own lifts (`guessWeight`: same main muscle and same
 kind of weight via `loadKind`, best recent e1RM −15%, needs 4+ workouts); the per-dumbbell total line refreshes
 as a whole (`totLine`).

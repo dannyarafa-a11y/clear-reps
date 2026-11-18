@@ -640,3 +640,61 @@ const STRETCH_HOW={
  Standing_Lateral_Stretch:["Stand tall, feet apart","Reach one arm up and over to the side","Keep your hips still; feel it down your side"],
  Overhead_Stretch:["Interlace your fingers above your head","Push your palms up and lengthen tall","Breathe out and reach a little higher"]
 };
+
+/* ---------- stretch swaps ----------
+   Extra single-person stretches, offered only as swaps (the default picks stay as they are). */
+const STRETCH_EXTRA=[
+ ["All_Fours_Quad_Stretch","All-fours quad stretch","each leg",["quads"]],
+ ["Intermediate_Hip_Flexor_and_Quad_Stretch","Lying quad stretch with a band","each leg",["quads"]],
+ ["Leg-Up_Hamstring_Stretch","Lying hamstring stretch","each leg",["hamstrings"]],
+ ["90_90_Hamstring","90/90 hamstring stretch","each leg",["hamstrings"]],
+ ["Runners_Stretch","Runner's stretch","each leg",["hamstrings","calves"]],
+ ["Seated_Calf_Stretch","Seated calf stretch","each leg",["calves","hamstrings"]],
+ ["Calf_Stretch_Elbows_Against_Wall","Elbows-on-wall calf stretch","each leg",["calves"]],
+ ["Standing_Soleus_And_Achilles_Stretch","Bent-knee calf stretch","each leg",["calves"]],
+ ["Standing_Gastrocnemius_Calf_Stretch","Step calf stretch","each leg",["calves"]],
+ ["Dancers_Stretch","Seated twist","each side",["glutes","lower_back"]],
+ ["Chair_Lower_Back_Stretch","Seated side reach","each side",["lats","lower_back"]],
+ ["Seated_Overhead_Stretch","Seated side bend","each side",["lats","abs"]],
+ ["Upward_Stretch","Standing overhead reach","",["abs","lats","shoulders"]],
+ ["Spinal_Stretch","Seated upper-back twist","each side",["upper_back","abs"]],
+ ["Middle_Back_Stretch","Standing twist","each side",["upper_back","abs"]],
+ ["Chest_Stretch_on_Stability_Ball","Chest stretch on a ball","each side",["chest","lats"]],
+ ["Kneeling_Forearm_Stretch","Kneeling forearm stretch","",["biceps"]]
+];
+Object.assign(STRETCH_HOW,{
+ All_Fours_Quad_Stretch:["On hands and knees","Reach back with one hand and hold the opposite foot","Gently pull the heel toward your glute"],
+ Intermediate_Hip_Flexor_and_Quad_Stretch:["Lie face down with a band or towel around one foot","Pull the heel toward your glute over your shoulder","Keep your hips pressed down"],
+ "Leg-Up_Hamstring_Stretch":["Lie on your back","Lift one leg and hold behind the thigh or calf","Straighten the knee as far as is comfortable"],
+ "90_90_Hamstring":["Lie on your back, hold one thigh with the knee bent at 90°","Slowly straighten the knee","Stop where you feel the back of the thigh"],
+ Runners_Stretch:["Step one foot forward, heel down, toes up","Hinge forward with a flat back","Reach toward the front foot"],
+ Seated_Calf_Stretch:["Sit with one leg straight","Loop a towel round the ball of the foot or reach for your toes","Pull your toes toward you"],
+ Calf_Stretch_Elbows_Against_Wall:["Forearms on a wall, one foot back","Back heel pressed down, leg straight","Lean in until the calf stretches"],
+ Standing_Soleus_And_Achilles_Stretch:["One foot back, both heels down","Bend the back knee and sink","Feel it low in the calf, near the heel"],
+ Standing_Gastrocnemius_Calf_Stretch:["Ball of one foot on a step, heel off","Straight leg, let the heel drop","Hold a rail for balance"],
+ Dancers_Stretch:["Sit, cross one leg over the other","Twist toward the bent knee, elbow against it","Sit tall and breathe"],
+ Chair_Lower_Back_Stretch:["Sit tall on a bench","Reach one arm up and over to the side","Let the other hand rest on the bench"],
+ Seated_Overhead_Stretch:["Sit with legs apart","Reach one arm overhead toward the opposite foot","Feel it along your side"],
+ Upward_Stretch:["Stand tall, interlace your fingers","Push your palms to the ceiling","Lengthen up through your sides"],
+ Spinal_Stretch:["Sit tall, hands behind your head","Twist your upper body to one side","Hold, then switch"],
+ Middle_Back_Stretch:["Stand with hands on hips","Turn your upper body to one side, hips facing forward","Hold, then switch"],
+ Chest_Stretch_on_Stability_Ball:["Kneel beside a ball, one arm resting on it","Let your chest sink toward the floor","Feel it across the chest and under the arm"],
+ Kneeling_Forearm_Stretch:["Kneel, palms on the floor, fingers pointing back toward you","Sit back gently","Feel it in the forearms"]
+});
+const STRETCH_ALL=()=>{ const out=[]; [...Object.values(STRETCHES).flat(),...STRETCH_EXTRA].forEach(x=>{ if(!out.some(a=>a[0]===x[0])) out.push(x); }); return out; };
+/* his preferred stretch in place of a default one, remembered in settings.stretchPref {defaultId: preferredId} */
+function applyStretchPrefs(picks){
+  const pref=S.settings?.stretchPref||{}, all=STRETCH_ALL(), used=new Set();
+  return picks.map(p=>{ const to=pref[p.id], x=to&&all.find(a=>a[0]===to);
+    const q=x&&!used.has(x[0])?{id:x[0],n:x[1],per:x[2],m:p.m,mus:x[3],from:p.id}:p; used.add(q.id); return q; });
+}
+function stretchSwapSheet(fromId,curId){
+  const all=STRETCH_ALL(), cur=all.find(a=>a[0]===curId)||all.find(a=>a[0]===fromId); if(!cur) return;
+  const mus=new Set(cur[3]), picks=coolDownFor(S.active).map(p=>p.id);
+  const opts=all.filter(a=>a[0]!==curId&&!picks.includes(a[0])&&a[3].some(m=>mus.has(m))).sort((a,b)=>b[3].filter(m=>mus.has(m)).length-a[3].filter(m=>mus.has(m)).length);
+  const isPref=!!S.settings?.stretchPref?.[fromId];
+  openSheet(`<div class="stack-l"><div><div class="eyebrow">Swap stretch</div><h2>Instead of ${esc(cur[1])}</h2><p class="small muted">Stretches the same muscles. Your choice is remembered for next time.</p></div>
+    ${isPref?`<button class="btn block" data-act="st-swap" data-from="${esc(fromId)}" data-to="">↺ Back to the default (${esc(all.find(a=>a[0]===fromId)?.[1]||"")})</button>`:""}
+    <div class="swaplist">${opts.map(a=>`<button class="swaprow" data-act="st-swap" data-from="${esc(fromId)}" data-to="${esc(a[0])}"><img src="${photoSrc(a[0],1)}" alt="" loading="lazy" onerror="phErr(this)"><span class="tt"><b>${esc(a[1])}</b><small>Stretches ${esc(a[3].map(m=>MUSCLES[m]?.n).join(", ").toLowerCase())}${a[2]?" · "+a[2]:""}</small></span><span class="chev">›</span></button>`).join("")||`<p class="small muted">No other stretch for these muscles yet.</p>`}</div>
+    <button class="btn ghost block" data-act="close-sheet">Cancel</button></div>`);
+}

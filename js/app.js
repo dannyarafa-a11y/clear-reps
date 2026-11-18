@@ -902,6 +902,7 @@ function settingsSheet(){
     <section class="card"><h3>Program</h3><p class="small muted" style="margin:0 0 10px">${splitKind()==="abc"?"3 workouts, each on two or three muscle groups.":"4 full-body workouts, each with a leg lift, a push and a pull."} Your history and progress carry over either way.</p>
       <div class="seg" role="group" aria-label="Which program"><button class="${splitKind()==="full4"?"on":""}" data-act="split" data-v="full4" aria-pressed="${splitKind()==="full4"}">4 full body</button><button class="${splitKind()==="abc"?"on":""}" data-act="split" data-v="abc" aria-pressed="${splitKind()==="abc"}">3-day split</button></div></section>
     <section class="card"><button class="tick toggle ${watchRemind()?"on":""}" data-act="watch-remind"><span class="box"></span><span class="tt"><span>Watch reminder</span><small>A reminder to start a strength workout on your watch when you begin, and to stop it at the end, so your heart rate is recorded.</small></span></button></section>
+    ${Object.keys(S.settings?.stretchPref||{}).length?`<section class="card"><h3>Stretch choices</h3><p class="small muted" style="margin:0 0 10px">${Object.keys(S.settings.stretchPref).length} stretch${Object.keys(S.settings.stretchPref).length===1?"":"es"} swapped for ones you prefer.</p><button class="btn block" data-act="st-prefs-reset">Reset to the defaults</button></section>`:""}
     <button class="btn block" data-act="gym" data-from="settings">My gym · equipment</button>
     <button class="btn block" data-act="settings-sync">Backup &amp; sync</button>
     <button class="btn ghost block" data-act="close-sheet">Done</button></div>`);
@@ -979,7 +980,7 @@ function coolDownFor(w){
     if(!pick){ need.delete(top); continue; }
     used.add(pick[0]); out.push({id:pick[0],n:pick[1],per:pick[2],m:top,mus:pick[3]}); pick[3].forEach(m=>need.delete(m));
   }
-  return out;
+  return applyStretchPrefs(out);
 }
 /* trained muscles: grey until a stretch for them is ticked, then green */
 function stretchLevels(w,picks){
@@ -1005,6 +1006,7 @@ function stretchView(day){
       ${STRETCH_HOW[p.id]?`<ol class="steps">${STRETCH_HOW[p.id].map(h=>`<li>${esc(h)}</li>`).join("")}</ol>`:""}
       <p class="small muted" style="margin:0"><b>You should feel it in:</b> ${esc(p.mus.map(m=>MUSCLES[m]?.n).join(", ").toLowerCase())}. A gentle pull, never pain. Breathe out and sink a little deeper each breath.</p>
       <a class="pill vid" href="https://www.youtube.com/results?search_query=${encodeURIComponent(p.n+" how to")}" target="_blank" rel="noopener">▶ Watch a video</a>
+      <button class="pill" data-act="st-swap-open" data-from="${esc(p.from||p.id)}" data-cur="${esc(p.id)}">⇄ Swap${p.from?" · your pick":""}</button>
       <div class="row"><button class="btn" data-act="hold" data-n="${esc(p.n)}">⏱ Hold 40s</button><button class="tick ${o[p.id]?"on":""}" data-act="cool" data-k="${esc(p.id)}"><span class="box"></span><span>${o[p.id]?"Done":"Mark done"}</span></button></div></section>`).join("")
     :day.cool.map((t,i)=>`<div class="tickrow"><button class="tick ${o[i]?"on":""}" data-act="cool" data-k="${i}"><span class="box"></span><span>${esc(t)}</span></button><button class="pill" data-act="hold" data-n="${esc(t)}">40s</button></div>`).join("");
   return `<section class="stage"><div class="eyebrow">Last step</div><h1 class="title">Stretch</h1><p class="muted">${picks.length?"Picked for the muscles you trained today.":"A few gentle stretches."} Hold each 30–45 seconds. Gentle, never painful.</p></section>
@@ -1833,6 +1835,10 @@ document.addEventListener("click",async ev=>{
   /* my gym */
   else if(a==="gym"){ S.gymFrom=b.dataset.from||""; gymSheet(); sheetTop(); }
   else if(a==="settings"){ settingsSheet(); sheetTop(); }
+  else if(a==="st-swap-open"){ stretchSwapSheet(b.dataset.from,b.dataset.cur); sheetTop(); }
+  else if(a==="st-swap"){ const pref={...(S.settings?.stretchPref||{})}, f=b.dataset.from, t=b.dataset.to; if(t) pref[f]=t; else delete pref[f];
+    if(await saveSettings({stretchPref:pref})){ closeSheet(); render(); toast(t?"Swapped. You'll get this one next time too":"Back to the default stretch"); } }
+  else if(a==="st-prefs-reset"){ if(await saveSettings({stretchPref:{}})){ settingsSheet(); toast("Stretch choices reset"); } }
   else if(a==="split"){ const v=b.dataset.v; if(splitKind()===v) return; if(S.active){ toast("Finish this workout first"); return; } if(await saveSettings({split:v})){ applyBlock(); render(); if($("#sheet .settings")) settingsSheet(); else if(!$("#sheet").hidden) pickDaySheet(); toast(v==="abc"?"Switched to the 3-day split":"Switched to 4 full-body workouts"); } }
   else if(a==="watch-remind"){ if(await saveSettings({watchRemind:!watchRemind()})){ settingsSheet(); } }
   else if(a==="watch-ok"){ if(S.active){ S.active.watchOn=true; saveActiveSoon(); } const c=b.closest(".watchnote"); if(c) c.remove(); }
