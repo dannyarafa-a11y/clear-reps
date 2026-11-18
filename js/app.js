@@ -508,12 +508,33 @@ function lastSetsFor(exId, excludeId){
 const WSTEPS=[1,2,2.5,5];
 function wStep(id){ const e=EX[id]||{}, o=+S.settings?.wstep?.[id]; if(o>0) return o; return /dumbbell|kettlebell/i.test(e.eq||"")?2:(e.inc>0?e.inc:2.5); }
 const roundTo=(v,st)=>+(Math.round(v/st)*st).toFixed(2);
+/* a first weight for an exercise he hasn't done, worked out from his own lifts: the best recent
+   estimated 1-rep max on exercises with the same main muscle and the same kind of weight (dumbbells,
+   machine, cable, barbell), turned into a weight he could lift ~3 more times than the bottom of the range,
+   then trimmed 15% because a new movement always feels harder. Needs a few logged workouts first. */
+const loadKind = e => perHand(e)?"db":/barbell|smith|ez bar/i.test(e.eq||"")?"bb":/cable/i.test(e.eq||"")?"cable":/machine|lever|plate|stack/i.test(e.eq||"")?"machine":/dumbbell|kettlebell/i.test(e.eq||"")?"db1":"other";
+function guessWeight(id){
+  const e=EX[id]; if(!e||e.inc===0||doneWorkouts().length<4) return null;
+  const kind=loadKind(e), best={};
+  doneWorkouts().slice(0,30).forEach(w=>(w.sets||[]).forEach(s=>{ if(!s.done||s.ex===id||!(+s.w>0)||!(+s.r>0)) return; const x=EX[s.ex]; if(!x||x.inc===0) return;
+    const v=e1rm(+s.w,+s.r); if(!best[s.ex]||v>best[s.ex]) best[s.ex]=v; }));
+  const score=k=>{ const x=EX[k]; let sc=0; if(x.m[0]===e.m[0]) sc+=3; else if(x.m.some(m=>e.m.includes(m))) sc+=2; else return 0;
+    if(loadKind(x)===kind) sc+=2; else return 0; /* other kinds of weight don't translate */
+    sc+=x.s.filter(m=>e.s.includes(m)).length*.5; if((x.m.length+x.s.length>2)===(e.m.length+e.s.length>2)) sc+=1; return sc; };
+  const cand=Object.keys(best).map(k=>[k,score(k)]).filter(([,sc])=>sc>=4).sort((a,b)=>b[1]-a[1]);
+  if(!cand.length) return null;
+  const [ref]=cand[0], rm=best[ref]*.85, reps=e.r[0]+3, st=wStep(id);
+  const w=Math.max(st,Math.round(rm/(1+reps/30)/st)*st);
+  return {w:+w.toFixed(2),from:EX[ref].n};
+}
 function targetFor(exId){
   const e=EX[exId], last=lastSetsFor(exId, S.active?.id);
   const u=e.timed?"s":"";
   const range=`${e.r[0]}–${e.r[1]}${u}`;
   if(!last){
     if(e.inc===0) return {w:0,r:e.r[0],short:`${range}${e.per?" "+e.per:""}`,text:"First time. Focus on form."};
+    const g=guessWeight(exId);
+    if(g) return {w:g.w,r:e.r[0],guess:true,short:`~${fmtKg(g.w)} kg · ${range}`,text:`First time. A starting guess from your ${g.from}. Do the first set, then tap Easy or Tough and the next one adjusts.`};
     return {w:"",r:e.r[0],short:`Find your weight · ${range}`,text:`Pick a weight you could lift about ${e.r[1]+3} times. Too easy? Tap Easy and the next set goes up.`};
   }
   const w=Math.max(...last.sets.map(s=>+s.w||0));
@@ -1046,6 +1067,7 @@ function emptyLiftView(){
     <div class="row center"><button class="link" data-act="step" data-i="0">← Back to warm-up</button><button class="link" data-act="step" data-i="2">Skip to stretching</button></div>`;
 }
 /* dumbbell exercises: the number you log is per dumbbell; show the total too */
+const totLine = w => +w>0?`Each hand ${fmtKg(w)} kg · <b class="num">${fmtKg(w*2)} kg</b> total`:"";
 const perHand = e => /dumbbell|kettlebell/i.test(e.eq||"") && !/\bone (dumbbell|kettlebell)|single|held at the chest/i.test(e.eq||"");
 const fmtKg = v => (+v).toFixed(1).replace(/\.0$/,"");
 /* weights he has used for this exercise recently, most recent first */
@@ -1069,7 +1091,7 @@ function loggerHTML(day,idx){
         ${bw?"":stepper(cur,"w",ph?"kg each hand":"kg")}
         ${stepper(cur,"r",unit+(e.per?" "+e.per:""))}
       </div>
-      ${ph&&+cur.w>0?`<p class="tiny muted center" style="margin-top:-6px">Each hand ${fmtKg(cur.w)} kg · <b class="num" id="tot-${cur.k}">${fmtKg(cur.w*2)} kg</b> total</p>`:""}
+      ${ph?`<p class="tiny muted center" id="tot-${cur.k}" style="margin-top:-6px">${totLine(cur.w)}</p>`:""}
       ${qw.length?`<div class="row center quickw">${qw.map(v=>`<button class="pill ${+cur.w===v?"on":""}" data-act="setw" data-k="${cur.k}" data-v="${v}">${fmtKg(v)} kg</button>`).join("")}<button class="pill quiet" data-act="wstep" data-ex="${id}" aria-label="Change weight step">± ${wStep(id)}</button></div>`
         :bw?"":`<div class="row center"><button class="pill quiet" data-act="wstep" data-ex="${id}">Steps of ${wStep(id)} kg · change</button></div>`}
       <div class="q">Done the set? Tap how it felt to log it.</div>
@@ -1706,7 +1728,7 @@ document.addEventListener("click",async ev=>{
     const step=f==="w"?wStep(s.ex):(e.timed?5:1);
     const old=s[f], v=Math.max(0,+((parseFloat(s[f])||0)+d*step).toFixed(1)); s[f]=v; carryForward(s,f,old);
     const inp=document.getElementById(`s-${s.k}-${f}`); if(inp) inp.value=v;
-    if(f==="w"){ const tot=document.getElementById(`tot-${s.k}`); if(tot) tot.textContent=fmtKg(v*2)+" kg"; else if(perHand(e)) updateLogger(); }
+    if(f==="w"){ const tot=document.getElementById(`tot-${s.k}`); if(tot) tot.innerHTML=totLine(v); else if(perHand(e)) updateLogger(); }
     saveActiveSoon();
   }
   else if(a==="undo"){ const s=S.active.sets.find(x=>x.k===b.dataset.k); s.done=false; s.feel=null; S.hint=""; stopRest(); updateLogger(); saveActiveSoon(); }
@@ -1850,7 +1872,9 @@ document.addEventListener("click",async ev=>{
 });
 document.addEventListener("input",ev=>{
   const t=ev.target, a=t.dataset?.act;
-  if(a==="set"){ const s=S.active.sets.find(x=>x.k===t.dataset.k), old=s[t.dataset.f]; s[t.dataset.f]=t.value; carryForward(s,t.dataset.f,old); saveActiveSoon(); }
+  if(a==="set"){ const s=S.active.sets.find(x=>x.k===t.dataset.k), old=s[t.dataset.f]; s[t.dataset.f]=t.value; carryForward(s,t.dataset.f,old);
+    if(t.dataset.f==="w"){ const tot=document.getElementById(`tot-${s.k}`); if(tot) tot.innerHTML=totLine(t.value); }
+    saveActiveSoon(); }
   else if(a==="field"){ S.active[t.dataset.k]=t.value; saveActiveSoon(); }
   else if(a==="ed-set"&&S.edit){ const x=S.edit.sets.find(y=>y.k===t.dataset.k); if(x) x[t.dataset.f]=t.value; }
   else if(a==="ed-notes"&&S.edit){ S.edit.notes=t.value; }

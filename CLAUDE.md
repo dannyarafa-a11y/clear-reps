@@ -93,6 +93,10 @@ muscles). Male or female figure: `settings.figure`, switch on the Body tab; `BOD
 Body tab has "Get to know your muscles": `MUSCLE_INFO` + `muscleSheet` (what it does, how it feels,
 exercises and stretches for it).
 
+v3.6.0: first-time exercises get a starting weight from his own lifts (`guessWeight`: same main muscle and same
+kind of weight via `loadKind`, best recent e1RM −15%, needs 4+ workouts); the per-dumbbell total line refreshes
+as a whole (`totLine`).
+
 v3.5.0: warm-up moves have details (`WARM_INFO` in smart.js, matched by the start of the text: photo, muscles,
 steps, why, video; rendered by `warmRows`); every cool-down stretch has steps (`STRETCH_HOW`, by library id) and a
 "you should feel it in" line. Any new warm-up text needs a `WARM_INFO` entry.
