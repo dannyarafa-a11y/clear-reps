@@ -610,8 +610,8 @@ function warmRows(items){
     return `<div class="warmrow ${o[k]?"on":""}"><button class="tick ${o[k]?"on":""}" data-act="warm" data-k="${k}"><span class="box"></span><span>${esc(t)}</span></button>
       ${inf?`<details class="winfo"><summary>${inf.mus?.length?`Warms ${esc(inf.mus.map(m=>MUSCLES[m]?.n).filter(Boolean).join(", ").toLowerCase())}`:"How to"} <span class="chev">›</span></summary>
         <div class="winfo-in">${inf.lib?photosHTML(inf.lib,1):""}
-          <div class="winfo-txt">${inf.mus?.length?`<span class="stfig">${bodyFig(Object.fromEntries(inf.mus.map(m=>[m,1])),{cls:"mini"})}</span>`:""}
-          <ol class="steps">${inf.how.map(h=>`<li>${esc(h)}</li>`).join("")}</ol></div>
+          <ol class="steps">${inf.how.map(h=>`<li>${esc(h)}</li>`).join("")}</ol>
+          ${inf.mus?.length?`<div class="stmap">${bodyFig(Object.fromEntries(inf.mus.map(m=>[m,1])))}</div>`:""}
           <p class="small muted" style="margin:0"><b>Why:</b> ${esc(inf.why)}</p>
           <a class="pill vid" href="https://www.youtube.com/results?search_query=${encodeURIComponent(t.replace(/[,×].*$/,"").trim()+" warm up how to")}" target="_blank" rel="noopener">▶ Watch a video</a></div></details>`:""}</div>`; }).join("")}</div>`;
 }

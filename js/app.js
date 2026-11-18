@@ -1001,8 +1001,9 @@ function stretchMap(w,picks){
 }
 function stretchView(day){
   const w=S.active, picks=coolDownFor(w), o=w.cool||{};
-  const rows=picks.length?picks.map((p,i)=>`<section class="stcard ${o[p.id]?"on":""}"><div class="sthead"><span class="stn num">${i+1}</span><div class="tt"><b>${esc(p.n)}</b><small>Stretches ${esc(p.mus.map(m=>MUSCLES[m]?.n).join(", ").toLowerCase())}${p.per?" · "+p.per:""} · hold 30–45s</small></div><span class="stfig">${bodyFig(Object.fromEntries(p.mus.map(m=>[m,1])),{cls:"mini"})}</span></div>
+  const rows=picks.length?picks.map((p,i)=>`<section class="stcard ${o[p.id]?"on":""}"><div class="sthead"><span class="stn num">${i+1}</span><div class="tt"><b>${esc(p.n)}</b><small>Stretches ${esc(p.mus.map(m=>MUSCLES[m]?.n).join(", ").toLowerCase())}${p.per?" · "+p.per:""} · hold 30–45s</small></div></div>
       ${photosHTML(p.id,1)}
+      <div class="stmap">${bodyFig(Object.fromEntries(p.mus.map(m=>[m,1])))}</div>
       ${STRETCH_HOW[p.id]?`<ol class="steps">${STRETCH_HOW[p.id].map(h=>`<li>${esc(h)}</li>`).join("")}</ol>`:""}
       <p class="small muted" style="margin:0"><b>You should feel it in:</b> ${esc(p.mus.map(m=>MUSCLES[m]?.n).join(", ").toLowerCase())}. A gentle pull, never pain. Breathe out and sink a little deeper each breath.</p>
       <a class="pill vid" href="https://www.youtube.com/results?search_query=${encodeURIComponent(p.n+" how to")}" target="_blank" rel="noopener">▶ Watch a video</a>
