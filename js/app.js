@@ -207,6 +207,27 @@ Object.assign(EX,{
 ["h_squat","h_split","h_hamwalk","h_slbridge","h_pike","h_ytw","h_calf","h_pushup","h_decline","h_widepush","h_chairdip","h_closepush","h_towelcurl","h_tablecurl","h_tablerow","h_doorrow","h_snow","h_superman","h_thrust","h_sideplank"].forEach(k=>{ const e=EX[k]; if(e.tip){ e.cues=[...e.cues,e.tip.replace(/\.$/,"")+"."]; } e.needs=[]; e.alts=e.alts||[]; e.home=true; if(e.lc===undefined) e.lc=null; });
 EX.h_hamwalk.lib=null;
 const HOME_WARM=["Arm circles, 10 each way","Wall push-ups × 10","Bodyweight squats × 10","Glute bridges × 10","Cat-cow × 8"];
+/* exercises on the named machines in Danny's gym (MY_GYM_EXTRA). Each needs its machine, so it only
+   appears once that machine is ticked in My gym, and it's offered first when swapping the matching exercise */
+const MC=(n,m,s,r,inc,lib,lc,need,cues,feel)=>({n,m,s,r,rest:90,inc,eq:"Machine",cues,mist:["Bouncing the weight at the bottom","Letting it slam back"],feel,swap:"",lib,lc,needs:[need],alts:[],gymMachine:true});
+Object.assign(EX,{
+ m_isoincline:MC("Iso-lateral incline press",["chest","shoulders"],["triceps"],[8,12],2.5,"Leverage_Incline_Chest_Press",6,"g_isoincline",["Seat so the handles line up with your upper chest","Press up and slightly in; each arm moves on its own","Lower slowly until you feel a stretch across the chest"],"Upper chest and front shoulders."),
+ m_convpress:MC("Converging chest press",["chest"],["shoulders","triceps"],[8,12],5,"Leverage_Chest_Press",6,"g_convpress",["Back flat on the pad, handles at chest height","Press forward; the handles come together as you go","Bring them back slowly until your elbows are just behind your body"],"Middle of the chest."),
+ m_dip:MC("Seated dip machine",["triceps"],["chest"],[8,12],5,"Dip_Machine",3,"g_dipmachine",["Sit tall, grip the handles beside you","Push down until your arms are straight","Let them rise slowly to about 90° at the elbow"],"Back of the arms."),
+ m_curl:MC("Biceps curl machine",["biceps"],[],[10,15],2.5,"Machine_Bicep_Curl",7,"g_curlmachine",["Upper arms flat on the pad, elbows lined up with the pivot","Curl up and squeeze","Lower all the way, slowly"],"Front of the upper arm."),
+ m_preacher:MC("Preacher curl (plate-loaded)",["biceps"],[],[8,12],2.5,"Machine_Preacher_Curls",7,"g_preacher",["Armpits snug against the top of the pad","Curl up without lifting your elbows","Lower slowly until the arms are almost straight"],"Front of the upper arm, low near the elbow."),
+ m_isopull:MC("Iso-lateral pulldown / high row",["lats"],["upper_back","biceps"],[8,12],2.5,"Leverage_High_Row",6,"g_isopull",["Thighs under the pads, chest tall","Pull the handles down to your shoulders, elbows driving down","Let them rise slowly until your arms are long"],"Sides of the back (lats)."),
+ m_csrow:MC("Chest-supported row",["upper_back","lats"],["rear_delts","biceps"],[8,12],2.5,"Leverage_Iso_Row",6,"g_csrow",["Chest on the pad, feet planted","Pull the handles back, squeezing your shoulder blades together","Let your arms straighten slowly"],"Middle of the back, between the shoulder blades."),
+ m_adductor:MC("Hip adductor",["quads"],["glutes"],[12,15],5,"Thigh_Adductor",12,"g_adductor",["Pads on the inside of your knees","Squeeze your legs together","Let them open slowly as far as is comfortable"],"Inner thighs."),
+ m_abductor:MC("Hip abductor",["glutes"],[],[12,15],5,"Thigh_Abductor",12,"g_abductor",["Pads on the outside of your knees","Push your knees out","Let them come back in slowly"],"Outer hips and side of the glutes."),
+ m_seatedcalf:MC("Seated calf raise",["calves"],[],[10,15],2.5,"Seated_Calf_Raise",9,"g_seatedcalf",["Balls of your feet on the platform, pad on your thighs","Rise as high as you can, pause a second","Lower your heels slowly below the platform"],"Lower calves."),
+ m_abcrunch:MC("Ab crunch machine",["abs"],[],[10,15],5,"Ab_Crunch_Machine",0,"g_abcrunch",["Hold the handles, feet hooked in","Curl your ribs toward your hips","Uncurl slowly; don't let the stack drop"],"Front of the stomach.")
+});
+/* offered first when swapping these program exercises, if the machine is in My gym */
+const MY_MACHINE_ALTS={incline:["m_isoincline"],dbbench:["m_convpress","m_isoincline"],chestpressm:["m_convpress"],pushdown:["m_dip"],ohext:["m_dip"],benchdip:["m_dip"],
+  curl:["m_curl","m_preacher"],hammer:["m_preacher"],cablecurl:["m_curl"],pulldown:["m_isopull"],assistpull:["m_isopull"],cablerow:["m_csrow"],dbrow:["m_csrow"],
+  calf:["m_seatedcalf"],slcalf:["m_seatedcalf"],plank:["m_abcrunch"],deadbug:["m_abcrunch"],hipthrust:["m_abductor"],glutebridge:["m_abductor"]};
+Object.entries(MY_MACHINE_ALTS).forEach(([k,list])=>{ if(EX[k]) EX[k].alts=[...list,...(EX[k].alts||[])]; });
 const HOME_DAYS = {
  "1":{ex:["h_squat","h_pushup","h_tablerow","h_ytw","h_towelcurl"],warm:HOME_WARM},
  "2":{ex:["h_hamwalk","h_pike","h_doorrow","h_chairdip","plank"],warm:HOME_WARM},
@@ -1039,6 +1060,7 @@ function liftView(day,idx){
       <div class="target"><span class="tl">Today</span><b>${esc(t.short)}</b>${t.up?`<span class="up">↑ level up</span>`:""}</div>
       <p class="muted small">${esc(t.text)}</p>
       ${lastTimeLine(id)}
+      ${easedLine(w,id)}
       <div class="row exacts"><button class="pill" data-act="swap-open" data-i="${idx}">⇄ Swap exercise</button></div></section>
     ${swapNote(w,id,idx)}
     <div id="logwrap">${loggerHTML(day,idx)}</div>
@@ -1049,6 +1071,23 @@ function liftView(day,idx){
     </details>
     <div class="navrow"><button class="btn" data-act="${idx===0?"step":"goto"}" data-i="${idx===0?0:idx-1}">← Back</button><button class="btn" data-act="${isLast?"step":"goto"}" data-i="${isLast?2:idx+1}">${isLast?"Stretch":"Skip ahead"} →</button></div>
     ${free&&isLast&&!w.sets.some(s=>s.ex===id&&!s.done)?`<button class="btn block" data-act="add-ss" data-ex="${id}">⇄ Add a superset to ${esc(e.n)}</button>`:`<div class="row addrow"><button class="btn" data-act="add-ex">+ Add exercise</button><button class="btn" data-act="add-ss" data-ex="${id}" aria-label="Add an exercise as a superset with ${esc(e.n)}">⇄ Superset</button></div>`}`;
+}
+/* "made easier today" with a way to go back to the normal weight and sets */
+function easedLine(w,id){
+  if(w.unEased?.[id]) return "";
+  const todo=w.sets.filter(x=>x.ex===id&&!x.done), lighter=todo.filter(x=>x.ow!=null&&+x.ow>+x.w), ez=w.eased?.[id]||{};
+  const less=ez.sets||0; if(!lighter.length&&!less) return "";
+  const what=[lighter.length?`${fmtKg(lighter[0].w)} kg instead of ${fmtKg(lighter[0].ow)} kg`:"",less?(less===1?"one set less":`${less} sets less`):""].filter(Boolean).join(" and ");
+  const why=(ez.why||[]).length?ez.why.join(" "):"You're easing back in after time off.";
+  return `<div class="eased"><p class="small" style="margin:0"><b>Made easier today:</b> ${esc(what)}.</p><p class="tiny muted" style="margin:0">${esc(why)}</p>
+    <button class="pill" data-act="uneasy" data-ex="${esc(id)}">Use my normal${lighter.length?" weight":""}${less?(lighter.length?" and sets":" sets"):""}</button></div>`;
+}
+function unEase(id){
+  const w=S.active; if(!w) return;
+  w.sets.filter(x=>x.ex===id&&!x.done&&x.ow!=null).forEach(x=>{ x.w=x.ow; x.pw=x.ow; delete x.ow; });
+  const less=w.eased?.[id]?.sets||0;
+  for(let j=0;j<less;j++){ const prev=w.sets.filter(x=>x.ex===id).at(-1); const ns={k:uid(),ex:id,w:prev?prev.w:"",r:prev?prev.r:"",pw:prev?prev.w:"",rir:"",done:false}; w.sets.splice(prev?w.sets.lastIndexOf(prev)+1:w.sets.length,0,ns); }
+  w.unEased={...(w.unEased||{}),[id]:true};
 }
 function swapNote(w,id,idx){
   const orig=w.swaps?.[id];
@@ -1559,6 +1598,8 @@ document.addEventListener("click",async ev=>{
   else if(a==="zoom-close"){ zoomClose(); }
   else if(a==="lib"){ libSheet({mode:"browse"}); }
   else if(a==="add-ex"){ if(S.active){ S.replaceIdx=null; S.ssWith=null; const pl=S.active.plan||[]; libSheet({mode:"pick",grp:pl.length===1?pl[0]:""}); } }
+  else if(a==="uneasy"){ unEase(b.dataset.ex); render(); saveActiveSoon(); toast("Back to your normal for "+(EX[b.dataset.ex]?.n||"this one")); }
+  else if(a==="uneasy-all"){ Object.keys(S.active?.eased||{}).forEach(unEase); S.active.sets.filter(x=>!x.done&&x.ow!=null).forEach(x=>unEase(x.ex)); render(); saveActiveSoon(); toast("Using your normal weights and sets"); }
   else if(a==="add-ss"){ if(S.active){ S.replaceIdx=null; S.ssWith=b.dataset.ex; libSheet({mode:"pick"}); } }
   else if(a==="lib-grp"&&S.lib){ S.lib.grp=b.dataset.g; S.lib.n=40; libRender(); }
   else if(a==="lib-mine"&&S.lib){ S.lib.mine=!S.lib.mine; S.lib.n=40; libRender(); }
@@ -2071,7 +2112,11 @@ async function startSession(dayId){
   const base=Object.fromEntries(res.ex.map((id,i)=>[id,adjBy[id]??setsFor(day,day.ex[i],ph)])), lrn=learnAdjust(res.ex,base);
   res.ex.forEach(id=>{ sets.push(...plannedSets(id,lrn.sets[id],lrn.wf[id])); });
   const learn=lrn.notes;
-  S.active={id:uid(),status:"active",where:atHome()?"home":"gym",dayId,dayName:day.name,week:wk,n:wk,date:todayISO(),startedAt:new Date().toISOString(),exList:res.ex,swaps:res.swaps,missing:res.missing,adjust,learn,sets,warm:{},cool:{}};
+  /* everything made easier today, so it can be undone from the exercise screen */
+  const eased={};
+  res.ex.forEach((id,i)=>{ const full=setsFor(day,day.ex[i],ph), less=Math.max(0,full-lrn.sets[id]), lighter=sets.some(x=>x.ex===id&&x.ow!=null);
+    if(less||lighter) eased[id]={sets:less,why:[...(lrn.why[id]||[]),...adjust.filter(a=>a.ex===id&&a.to<a.from).map(a=>a.why)]}; });
+  S.active={id:uid(),status:"active",where:atHome()?"home":"gym",dayId,dayName:day.name,week:wk,n:wk,date:todayISO(),startedAt:new Date().toISOString(),exList:res.ex,swaps:res.swaps,missing:res.missing,adjust,learn,eased,sets,warm:{},cool:{}};
   S.step=0; S.exIdx=0; S.hint=""; S.paused=false; S.view="today"; render(); window.scrollTo(0,0);
   await saveActive();
   requestWake();

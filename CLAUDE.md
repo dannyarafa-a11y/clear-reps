@@ -93,6 +93,11 @@ muscles). Male or female figure: `settings.figure`, switch on the Body tab; `BOD
 Body tab has "Get to know your muscles": `MUSCLE_INFO` + `muscleSheet` (what it does, how it feels,
 exercises and stretches for it).
 
+v3.3.0: exercises for his named machines (`m_*`, need the matching `g_*` item in My gym) are offered first in
+Swap (`MY_MACHINE_ALTS`) and appear in the library and quick picks; anything made easier today is recorded
+(`w.eased`, set `ow` = normal weight) and can be undone per exercise ("Use my normal", `unEase`) or all at once
+from the brief.
+
 v3.2.0: Danny's real gym loaded once from his "Gym Equipment List" Sheet (`applyMyGym`, `MY_GYM_EXTRA`,
 `settings.myGym`); confetti and "Nth workout this week" on every finish, own workouts included; Home round tile
 counts all workouts this week; Apple Health shown as one readiness message against his own usual (`healthStrip`);

@@ -124,8 +124,9 @@ function plannedSets(id,n,wf){
       if(e.inc>0&&+ls.w>0) w=+ls.w;
       const lr=+ls.r||0; if(lr>0) r=Math.min(Math.max(lr+1,e.r[0]),e.r[1]);
     }
+    const norm=w;
     if(e.inc===0) w=0; else w=applyWf(id,w,wf??returnState()?.factor);
-    out.push({k:uid(),ex:id,w,r,pw:w,rir:"",done:false});
+    out.push({k:uid(),ex:id,w,r,pw:w,rir:"",done:false,...(e.inc!==0&&+norm>0&&+w<+norm?{ow:norm}:{})});
   }
   return out;
 }
@@ -143,6 +144,8 @@ function preBrief(w,day){
   if(free) items.push(`<li><b>Your own workout${(w.plan||[]).length?": "+esc(w.plan.join(" + ")):""}.</b> Starts empty. Add each exercise as you get to it. The warm-up matches what you picked.</li>`);
   items.push(`<li><b>${esc(ph.name)}:</b> ${free?"":day.custom||ph.sets<3?`${ph.sets} sets each, `:`${ph.sets} sets on the three main lifts, 2 on the finishers, `}stop each set with ${esc(ph.rir)} reps left in the tank. <span class="muted">Trainers call this reps in reserve.</span></li>`);
   (w.learn||[]).forEach(n=>items.push(`<li>${n.t}</li>`));
+  const anyEase=Object.keys(w.eased||{}).length||(w.sets||[]).some(x=>!x.done&&x.ow!=null);
+  if(anyEase&&!(w.unEasedAll)) items.push(`<li class="nobullet"><button class="pill" data-act="uneasy-all">Use my normal weights and sets today</button> <span class="muted">You can also undo it per exercise.</span></li>`);
   items.push(...adjustLines(w.adjust));
   const gear=Object.entries(w.swaps||{}).filter(([nw,orig])=>EX[nw]&&EX[orig]&&!(w.userSwaps||{})[nw]);
   if(gear.length) items.push(`<li><b>Swapped for your gym:</b> ${esc(gear.map(([nw,orig])=>`${EX[nw].n} instead of ${EX[orig].n}`).join(", "))}.</li>`);
@@ -195,7 +198,7 @@ function swapOptions(id){
   const prim=e.m[0], out=[];
   (e.alts||[]).forEach(a=>{ if(EX[a]&&!list.includes(a)) out.push(a); });
   Object.keys(EX).forEach(k=>{ const x=EX[k]; if(k===id||out.includes(k)||list.includes(k)||x.placeholder) return; if(prim&&x.m.includes(prim)) out.push(k); });
-  return out.filter(k=>!atHome()||exOK(k,g)).sort((a,b)=>(exOK(b,g)-exOK(a,g))||((e.alts||[]).includes(b)-(e.alts||[]).includes(a))).slice(0,6);
+  return out.filter(k=>atHome()?exOK(k,g):!EX[k].home).sort((a,b)=>(exOK(b,g)-exOK(a,g))||((e.alts||[]).includes(b)-(e.alts||[]).includes(a))).slice(0,6);
 }
 function swapSheet(i){
   const w=S.active, day=sessionDay(w), id=day.ex[i], e=EX[id]; if(!e) return;
@@ -469,20 +472,20 @@ function lowReadiness(){ try{ const r=readiness(); return r&&r.k==="easy"?r:null
 
 /* the rules, applied to a planned session's sets and weights */
 function learnAdjust(ids,baseSets){
-  const notes=[], sets={...baseSets}, wf={}, ph=phaseFor(currentWeek());
+  const notes=[], sets={...baseSets}, wf={}, ph=phaseFor(currentWeek()), why={}, tag=(id,t)=>{ (why[id]=why[id]||[]).push(t); };
   const ret=returnState();
-  if(ret){ ids.forEach(id=>{ sets[id]=Math.max(1,sets[id]-1); if(ret.factor<1) wf[id]=ret.factor; });
+  if(ret){ ids.forEach(id=>{ sets[id]=Math.max(1,sets[id]-1); if(ret.factor<1) wf[id]=ret.factor; tag(id,`Easing back in after ${ret.off} days off.`); });
     notes.push({k:"return",t:`<b>Welcome back.</b> ${ret.since?`Session ${ret.since+1} of ${ret.sessions}`:`${ret.off} days off`}, so one set less on everything${ret.factor<1?` and weights about ${Math.round((1-ret.factor)*100)}% lighter`:""}. Your body keeps most of its strength, this just lets the joints catch up.`}); }
   const sf=sessionFeelTrend();
-  if(!ret&&sf==="hard"){ const tail=ids.slice(-2); tail.forEach(id=>sets[id]=Math.max(1,sets[id]-1)); notes.push({k:"hard",t:`<b>Last two sessions felt brutal.</b> One set less on the last two exercises today.`}); }
+  if(!ret&&sf==="hard"){ const tail=ids.slice(-2); tail.forEach(id=>{ sets[id]=Math.max(1,sets[id]-1); tag(id,"Your last two sessions felt brutal."); }); notes.push({k:"hard",t:`<b>Last two sessions felt brutal.</b> One set less on the last two exercises today.`}); }
   if(!ret&&sf==="easy"&&ph.key!=="deload"){ ids.slice(0,2).forEach(id=>sets[id]=Math.min(5,sets[id]+1)); notes.push({k:"easy",t:`<b>Your last three sessions felt easy.</b> One extra set on the first two exercises.`}); }
   const rd=lowReadiness();
-  if(rd&&!ret){ const tail=ids.slice(-2); tail.forEach(id=>sets[id]=Math.max(1,sets[id]-1)); notes.push({k:"ready",t:`<b>Recovery looks low</b>${rd.sleep!=null&&rd.sleep<6?` (${(+rd.sleep).toFixed(1)} h sleep)`:""}${rd.delta!=null&&rd.delta>=5?` (resting heart rate +${Math.round(rd.delta)})`:""}. One set less on the last two exercises; stop sets at Good.`}); }
+  if(rd&&!ret){ const tail=ids.slice(-2); tail.forEach(id=>{ sets[id]=Math.max(1,sets[id]-1); tag(id,"Your watch shows low recovery today."); }); notes.push({k:"ready",t:`<b>Recovery looks low</b>${rd.sleep!=null&&rd.sleep<6?` (${(+rd.sleep).toFixed(1)} h sleep)`:""}${rd.delta!=null&&rd.delta>=5?` (resting heart rate +${Math.round(rd.delta)})`:""}. One set less on the last two exercises; stop sets at Good.`}); }
   ids.forEach(id=>{ const e=EX[id]; if(!e||e.inc===0) return; const ft=feelTrend(id,2);
-    if(ft.n>=4&&ft.tough/ft.n>=.5&&!ret){ wf[id]=Math.min(wf[id]||1,.92); notes.push({k:"tough",id,t:`<b>${esc(e.n)}:</b> most sets felt tough the last two times, so about 8% lighter today to rebuild reps.`}); }
-    else if(stalled(id)&&!ret){ wf[id]=Math.min(wf[id]||1,.9); notes.push({k:"stall",id,t:`<b>${esc(e.n)} has stalled</b> for three sessions. Dropping about 10% and building back up usually breaks it. If it stalls again, try a swap.`}); }
+    if(ft.n>=4&&ft.tough/ft.n>=.5&&!ret){ wf[id]=Math.min(wf[id]||1,.92); tag(id,"Most sets felt Tough the last two times."); notes.push({k:"tough",id,t:`<b>${esc(e.n)}:</b> most sets felt tough the last two times, so about 8% lighter today to rebuild reps.`}); }
+    else if(stalled(id)&&!ret){ wf[id]=Math.min(wf[id]||1,.9); tag(id,"Stuck at the same weight for three sessions; a small drop helps you build past it."); notes.push({k:"stall",id,t:`<b>${esc(e.n)} has stalled</b> for three sessions. Dropping about 10% and building back up usually breaks it. If it stalls again, try a swap.`}); }
   });
-  return {sets,wf,notes};
+  return {sets,wf,notes,why};
 }
 /* lighten by a factor, always at least one weight step, never below one step */
 const applyWf=(id,w,f)=>{ if(!(f<1)||!(+w>0)) return w; const st=wStep(id); return +Math.max(st,Math.min(Math.round(+w*f/st)*st,+w-st)).toFixed(2); };
