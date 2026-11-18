@@ -1444,7 +1444,7 @@ function progressTiles(){
   const up=Object.keys(recent).filter(ex=>recent[ex]>first[ex].v*1.01).length;
   return `<div class="tiles three"><div class="tile mint"><b class="tn num">${ws.length}</b><span>${ws.length===1?"workout":"workouts"} done</span></div>
     <div class="tile sun"><b class="tn num">${up}</b><span>${up===1?"lift has":"lifts have"} gone up</span></div>
-    <div class="tile pink"><b class="tn num">${highlights().filter(h=>h.k==="pb").length}</b><span>new personal bests lately</span></div></div>
+    ${(()=>{ const n=highlights().filter(h=>h.k==="pb").length; return `<div class="tile pink"><b class="tn num">${n}</b><span>new personal ${n===1?"best":"bests"} lately</span></div>`; })()}</div>
   ${highlightsCard()}`;
 }
 function viewProgress(){
