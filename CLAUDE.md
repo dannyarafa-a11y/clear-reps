@@ -135,3 +135,8 @@ Open ideas Danny hasn't picked yet:
 - Sign-up lock: Danny has signed in (Nov 7), so "Allow new users to sign up" can now be turned off
   in Supabase → Authentication → Sign In / Providers (dashboard only; not possible via SQL).
 - A real standing quad stretch photo is missing from the library (side-lying is used instead).
+
+v3.8.0: Home's pink win tile is now a rotating highlights tile (`highlights`, `highlightTile`, `highlightsCard` in smart.js):
+recent personal bests, lifts up 8%+ over the last 21 days, and "showing up"; tap to cycle. Progress lists them. Replaced
+`bestWin` (it picked the biggest kg gain ever, so it was stuck on walking lunges). "Lifts gone up" now compares the best of
+the last 30 days with the first session (e1RM); the strength chart opens on his most-trained recent lift unless he picks one.

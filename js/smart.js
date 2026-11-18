@@ -698,3 +698,43 @@ function stretchSwapSheet(fromId,curId){
     <div class="swaplist">${opts.map(a=>`<button class="swaprow" data-act="st-swap" data-from="${esc(fromId)}" data-to="${esc(a[0])}"><img src="${photoSrc(a[0],1)}" alt="" loading="lazy" onerror="phErr(this)"><span class="tt"><b>${esc(a[1])}</b><small>Stretches ${esc(a[3].map(m=>MUSCLES[m]?.n).join(", ").toLowerCase())}${a[2]?" · "+a[2]:""}</small></span><span class="chev">›</span></button>`).join("")||`<p class="small muted">No other stretch for these muscles yet.</p>`}</div>
     <button class="btn ghost block" data-act="close-sheet">Cancel</button></div>`);
 }
+
+/* ---------- highlights: small wins worth seeing, newest first ----------
+   Replaces the old "biggest kg gain ever", which got stuck on whatever started lightest. */
+function highlights(){
+  const ws=doneWorkouts(); if(!ws.length) return [];
+  const out=[], chrono=ws.slice().reverse(), t=todayISO();
+  const best=s=>EX[s.ex]?.inc===0?(+s.r||0):e1rm(+s.w||0,+s.r||0);
+  const label=(id,s)=>{ const e=EX[id]; return e.inc===0?`${s.r}${e.timed?" s":" reps"}`:`${fmtKg(s.w)} kg × ${s.r}`; };
+  /* personal bests in each of the last 3 workouts */
+  ws.slice(0,3).forEach(w=>{
+    const byEx={}; (w.sets||[]).filter(s=>s.done&&EX[s.ex]).forEach(s=>{ if(!byEx[s.ex]||best(s)>best(byEx[s.ex])) byEx[s.ex]=s; });
+    Object.entries(byEx).forEach(([id,s])=>{
+      const prev=chrono.filter(x=>x.date<w.date||(x.date===w.date&&x.id!==w.id&&(x.finishedAt||"")<(w.finishedAt||""))).flatMap(x=>(x.sets||[]).filter(y=>y.done&&y.ex===id));
+      if(!prev.length) return;
+      const pb=Math.max(...prev.map(best)); if(best(s)>pb*1.01) out.push({k:"pb",date:w.date,score:3+(best(s)/pb-1)*10,
+        tl:"New personal best",tn:EX[id].n,sub:`${label(id,s)} · ${daysBetween(w.date,t)===0?"today":daysBetween(w.date,t)===1?"yesterday":fmtDate(w.date)}`});
+    });
+  });
+  /* steady progress on something trained recently: first vs latest, in % */
+  const recentIds=[...new Set(ws.filter(w=>daysBetween(w.date,t)<=21).flatMap(w=>(w.sets||[]).filter(s=>s.done).map(s=>s.ex)))].filter(id=>EX[id]);
+  recentIds.forEach(id=>{
+    const ses=chrono.map(w=>({date:w.date,top:Math.max(0,...(w.sets||[]).filter(s=>s.done&&s.ex===id).map(best))})).filter(x=>x.top>0);
+    if(ses.length<2) return; const g=ses.at(-1).top/ses[0].top-1; if(g<.08) return;
+    const e=EX[id]; out.push({k:"up",date:ses.at(-1).date,score:1+Math.min(g,1),tl:e.inc===0?"More reps":"Getting stronger",tn:e.n,sub:`${e.inc===0?`${Math.round(ses[0].top)} → ${Math.round(ses.at(-1).top)} ${e.timed?"s":"reps"}`:(g>=1?"more than double":`up ${Math.round(g*100)}%`)} since ${fmtDate(ses[0].date)}`});
+  });
+  /* showing up */
+  const n14=ws.filter(w=>daysBetween(w.date,t)<14).length;
+  if(n14>=2) out.push({k:"habit",date:ws[0].date,score:1.2,tl:"Showing up",tn:`${n14} workouts`,sub:"in the last 2 weeks"});
+  /* newest first, then the bigger win */
+  return out.sort((a,b)=>b.date.localeCompare(a.date)||b.score-a.score).filter((h,i,a)=>a.findIndex(x=>x.tn===h.tn)===i);
+}
+function highlightTile(){
+  const hs=highlights(); if(!hs.length) return "";
+  const i=(S.hlIdx||0)%hs.length, h=hs[i];
+  return `<button class="tile pink hl" data-act="hl-next" aria-label="Next highlight"><b class="tl">${esc(h.tl)}</b><b class="tn hl-n">${esc(h.tn)}</b><span>${esc(h.sub)}</span>${hs.length>1?`<span class="hl-dots" aria-hidden="true">${hs.slice(0,5).map((_,j)=>`<i class="${j===i%5?"on":""}"></i>`).join("")}</span>`:""}</button>`;
+}
+function highlightsCard(){
+  const hs=highlights().slice(0,6); if(!hs.length) return "";
+  return `<section class="card"><h3>Highlights</h3><ul class="hl-list">${hs.map(h=>`<li><span class="hl-ic hl-${h.k}">${{pb:"★",up:"↑",habit:"✓"}[h.k]}</span><span><b>${esc(h.tn)}</b><br><span class="small muted">${esc(h.tl)} · ${esc(h.sub)}</span></span></li>`).join("")}</ul></section>`;
+}

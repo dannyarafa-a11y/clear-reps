@@ -710,16 +710,6 @@ function estMins(ids,setsBy){
   const secs=ids.reduce((a,id)=>a+(setsBy[id]||0)*((EX[id]?.rest||90)+45),0);
   return Math.max(10,Math.round((secs/60+8+5)/5)*5);
 }
-/* the biggest weight gain on any lift since he first logged it: the one win Home shows */
-function bestWin(){
-  const first={}, last={};
-  doneWorkouts().slice().reverse().forEach(w=>{ const top={};
-    (w.sets||[]).forEach(s=>{ if(s.done&&EX[s.ex]&&+s.w>0) top[s.ex]=Math.max(top[s.ex]||0,+s.w); });
-    Object.entries(top).forEach(([ex,v])=>{ if(!first[ex]) first[ex]={v,date:w.date}; last[ex]={v,date:w.date}; }); });
-  let best=null;
-  Object.keys(first).forEach(ex=>{ const g=last[ex].v-first[ex].v; if(g>0&&last[ex].date!==first[ex].date&&(!best||g>best.gain)) best={ex,gain:g,since:first[ex].date}; });
-  return best;
-}
 const lc1 = t => t.charAt(0).toLowerCase()+t.slice(1);
 const listAnd = a => a.length<=1?(a[0]||""):a.slice(0,-1).join(", ")+" and "+a.at(-1);
 /* "Leg press, dumbbell bench press and lat pulldown, then lateral raise and curl to finish." */
@@ -762,10 +752,9 @@ function viewToday(){
   const date=new Date().toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"short"});
   const name=S.settings?.name||"Danny";
   const resume=S.active&&S.paused?`<button class="resume" data-act="resume"><span><b>Workout in progress</b><br><span class="muted">${esc(wLabel(S.active))} · ${(S.active.sets||[]).filter(s=>s.done).length} sets logged</span></span><span class="go">Resume →</span></button><button class="link center" data-act="cancel-session">Discard workout</button>`:"";
-  const win=bestWin(), nDone=doneWorkouts().length;
-  const winTile=win?`<div class="tile pink"><b class="tl">You're stronger</b><b class="tn num">+${fmtKg(win.gain)} kg</b><span>on ${esc(lc1(EX[win.ex].n))} since ${new Date(win.since+"T12:00:00").toLocaleDateString(undefined,{day:"numeric",month:"short"})}</span></div>`
-    :nDone?`<div class="tile pink"><b class="tl">You keep showing up</b><b class="tn num">${nDone}</b><span>${nDone===1?"workout":"workouts"} done so far</span></div>`
-    :`<div class="tile pink"><b class="tl">Start here</b><b class="tn">Day one</b><span>The first workout finds your weights.</span></div>`;
+  const nDone=doneWorkouts().length;
+  const winTile=highlightTile()||(nDone?`<div class="tile pink"><b class="tl">You keep showing up</b><b class="tn num">${nDone}</b><span>${nDone===1?"workout":"workouts"} done so far</span></div>`
+    :`<div class="tile pink"><b class="tl">Start here</b><b class="tn">Day one</b><span>The first workout finds your weights.</span></div>`);
   const notes=[`<span>${esc(ph.name)}</span>`,nSwap?`<span>${nSwap} swapped for your gym</span>`:"",lrnH.notes.length?`<span class="adj">${lrnH.notes.some(n=>n.k==="return")?"Easing back in":"Tuned to your log"}</span>`:"",adj.length?`<span class="adj">${adj.length} eased for recovery</span>`:""].join("");
   return `${notice()}
   <header class="top"><div class="spread"><div class="muted small">${esc(date)}</div><div class="row" style="gap:6px;flex-wrap:nowrap"><div class="seg where" role="group" aria-label="Where are you training?"><button class="${atHome()?"":"on"}" data-act="where" data-v="gym" aria-pressed="${!atHome()}">Gym</button><button class="${atHome()?"on":""}" data-act="where" data-v="home" aria-pressed="${atHome()}">Home</button></div><button class="pill quiet" data-act="settings" aria-label="Settings">${GEAR_I}</button></div></div>
@@ -1447,19 +1436,23 @@ function addToSession(kind,k){
 /* ---------- progress ---------- */
 /* three plain wins at the top of Progress */
 function progressTiles(){
-  const ws=doneWorkouts(), first={}, last={};
+  /* a lift counts as "gone up" when its best in the last 30 days beats its first session (one light day doesn't undo it) */
+  const ws=doneWorkouts(), t=todayISO(), first={}, recent={};
   ws.slice().reverse().forEach(w=>{ const top={};
-    (w.sets||[]).forEach(x=>{ if(x.done&&EX[x.ex]) top[x.ex]=Math.max(top[x.ex]||0,EX[x.ex].inc===0?(+x.r||0):(+x.w||0)); });
-    Object.entries(top).forEach(([ex,v])=>{ if(!(ex in first)) first[ex]=v; last[ex]=v; }); });
-  const up=Object.keys(first).filter(ex=>last[ex]>first[ex]).length, win=bestWin();
+    (w.sets||[]).forEach(x=>{ if(x.done&&EX[x.ex]) top[x.ex]=Math.max(top[x.ex]||0,EX[x.ex].inc===0?(+x.r||0):e1rm(+x.w||0,+x.r||0)); });
+    Object.entries(top).forEach(([ex,v])=>{ if(!(ex in first)) first[ex]={v,date:w.date}; else if(daysBetween(w.date,t)<=30) recent[ex]=Math.max(recent[ex]||0,v); }); });
+  const up=Object.keys(recent).filter(ex=>recent[ex]>first[ex].v*1.01).length;
   return `<div class="tiles three"><div class="tile mint"><b class="tn num">${ws.length}</b><span>${ws.length===1?"workout":"workouts"} done</span></div>
     <div class="tile sun"><b class="tn num">${up}</b><span>${up===1?"lift has":"lifts have"} gone up</span></div>
-    <div class="tile pink"><b class="tn num">${win?"+"+fmtKg(win.gain):"0"}<small> kg</small></b><span>${win?"on "+esc(lc1(EX[win.ex].n)):"biggest gain so far"}</span></div></div>`;
+    <div class="tile pink"><b class="tn num">${highlights().filter(h=>h.k==="pb").length}</b><span>new personal bests lately</span></div></div>
+  ${highlightsCard()}`;
 }
 function viewProgress(){
   const logged=[...new Set(doneWorkouts().flatMap(w=>(w.sets||[]).filter(s=>s.done).map(s=>s.ex)))];
   const opts=Object.entries(EX).filter(([k])=>logged.includes(k)).map(([k,e])=>`<option value="${k}" ${S.chartEx===k?"selected":""}>${esc(e.n)}</option>`).join("");
-  if(logged.length&&!logged.includes(S.chartEx)) S.chartEx=logged[0];
+  /* the chart opens on the lift he's done most often lately, unless he picked one */
+  if(logged.length&&(!S.chartPicked||!logged.includes(S.chartEx))){ const n={}; doneWorkouts().slice(0,10).forEach(w=>new Set((w.sets||[]).filter(s=>s.done).map(s=>s.ex)).forEach(ex=>n[ex]=(n[ex]||0)+1));
+    S.chartEx=logged.slice().sort((a,b)=>(n[b]||0)-(n[a]||0))[0]; }
   const cks=S.checkins.slice().sort((a,b)=>b.date.localeCompare(a.date));
   const lastW=cks.find(c=>c.weight), firstW=cks.slice().reverse().find(c=>c.weight);
   const photos=cks.filter(c=>c.photoId).slice(0,9);
@@ -1836,6 +1829,7 @@ document.addEventListener("click",async ev=>{
   /* my gym */
   else if(a==="gym"){ S.gymFrom=b.dataset.from||""; gymSheet(); sheetTop(); }
   else if(a==="settings"){ settingsSheet(); sheetTop(); }
+  else if(a==="hl-next"){ S.hlIdx=(S.hlIdx||0)+1; const t=document.querySelector(".tile.hl"); if(t) t.outerHTML=highlightTile(); }
   else if(a==="st-swap-open"){ stretchSwapSheet(b.dataset.from,b.dataset.cur); sheetTop(); }
   else if(a==="st-swap"){ const pref={...(S.settings?.stretchPref||{})}, f=b.dataset.from, t=b.dataset.to; if(t) pref[f]=t; else delete pref[f];
     if(await saveSettings({stretchPref:pref})){ closeSheet(); render(); toast(t?"Swapped. You'll get this one next time too":"Back to the default stretch"); } }
@@ -1899,7 +1893,7 @@ document.addEventListener("change",ev=>{ const t=ev.target;
     if(!(S.dbState==="on"&&S.canWrite)){ t.value=maxHR(); toast("Still loading. One second."); return; }
     S.settings={...(S.settings||{}),maxHr:v}; writeSettings().then(ok=>toast(ok?"Max heart rate saved":"Couldn't save. Check your connection.")); render(); return;
   }
-  if(t.dataset?.act==="chart-ex"){ S.chartEx=t.value; render(); }
+  if(t.dataset?.act==="chart-ex"){ S.chartEx=t.value; S.chartPicked=true; render(); }
   if(t.dataset?.act==="ed-date"&&S.edit){ S.edit.date=t.value; }
   if(t.dataset?.act==="b-cx"&&S.build?.cx){ S.build.cx[t.dataset.k]=t.value; }
   if(t.dataset?.act==="ed-addex"&&S.edit&&t.value){ const t0=targetFor(t.value); S.edit.sets.push({k:uid(),ex:t.value,w:t0.w||"",r:t0.r||"",rir:"",done:true,feel:null}); editSheet(); }

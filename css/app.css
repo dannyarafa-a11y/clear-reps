@@ -704,3 +704,13 @@ ol.steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;f
    (it jumped up over the stretches). Sticky can't drift like that. */
 .wrap>.dock{position:sticky;bottom:0;left:auto;right:auto;margin:0 calc(-1 * max(18px,env(safe-area-inset-left,0px)));margin-top:auto}
 .wrap.session:has(>.dock){padding-bottom:0}
+/* highlights */
+.tile.hl{text-align:left;font:inherit;color:inherit;border:0;cursor:pointer}
+.tile.hl .hl-n{font-size:18px;line-height:1.2}
+.hl-dots{display:flex;gap:4px;margin-top:6px}
+.hl-dots i{width:6px;height:6px;border-radius:50%;background:rgba(35,24,15,.18)}
+.hl-dots i.on{background:var(--ink)}
+.hl-list{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:10px}
+.hl-list li{display:flex;gap:12px;align-items:center}
+.hl-ic{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-weight:800;flex:none}
+.hl-pb{background:var(--sun)} .hl-up{background:var(--mint)} .hl-habit{background:var(--pink)}
