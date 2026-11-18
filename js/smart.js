@@ -576,3 +576,66 @@ async function monthShare(){
   try{ if(navigator.canShare&&navigator.canShare({files:[file]})){ await navigator.share({files:[file],title:"Clear Reps monthly summary"}); return; } }catch(e){ if(e?.name==="AbortError") return; }
   const a=document.createElement("a"); a.href=URL.createObjectURL(file); a.download=name; document.body.appendChild(a); a.click(); a.remove(); toast("Downloaded");
 }
+
+/* ---------- warm-up and stretch details ----------
+   Warm-up moves: matched by the start of their text. lib = photo (Free Exercise DB), mus = muscles it wakes up,
+   how = how to do it, why = what it's for. Stretch how-tos are keyed by their library id. */
+const WARM_INFO=[
+ [/^5 min easy cardio/i,{mus:["quads","hamstrings","calves"],how:["Bike, rower or an incline walk at a pace where you could still talk","Build up gently over the 5 minutes"],why:"Raises your heart rate and body temperature, so muscles and joints move more easily."}],
+ [/^Leg swings/i,{mus:["hamstrings","glutes","quads"],how:["Hold a wall or rack for balance","Swing one leg forward and back, relaxed, a little higher each time","Then side to side across your body"],why:"Loosens the hips through their full range before squats, lunges and leg press."}],
+ [/^Bodyweight squats/i,{lib:"Bodyweight_Squat",mus:["quads","glutes"],how:["Feet shoulder-width, toes slightly out","Sit down and back, chest up, as deep as is comfortable","Stand up smoothly; no rush"],why:"Rehearses the squat pattern and warms the knees and hips."}],
+ [/^Glute bridges/i,{lib:"Butt_Lift_Bridge",mus:["glutes","hamstrings"],how:["Lie on your back, knees bent, feet flat","Push through your heels and lift your hips","Squeeze the glutes for a second at the top"],why:"Switches the glutes on so they do their share in leg and hip exercises."}],
+ [/^Walking lunges/i,{lib:"Bodyweight_Walking_Lunge",mus:["quads","glutes"],how:["Long step forward, drop the back knee toward the floor","Push off the front foot into the next step","Stay tall; small steps are fine"],why:"Warms each leg on its own and stretches the front of the hip."}],
+ [/^Arm circles/i,{lib:"Arm_Circles",mus:["shoulders","rear_delts"],how:["Arms straight out to the sides","Small circles, getting bigger","Then the other direction"],why:"Gets fluid moving in the shoulder joints before any pressing or pulling."}],
+ [/^Arm swings across/i,{mus:["chest","upper_back"],how:["Open your arms wide, then swing them across your chest, alternating which is on top","Relaxed and rhythmic"],why:"Opens the chest and the back of the shoulders."}],
+ [/^Band pull-aparts/i,{lib:"Band_Pull_Apart",mus:["rear_delts","upper_back"],how:["Hold a light band in front at shoulder height, arms straight","Pull it apart until it touches your chest, squeezing the shoulder blades","Return slowly. No band: pull your arms back the same way"],why:"Wakes up the upper back so your shoulders sit well for presses and rows."}],
+ [/^Band shoulder pass-throughs/i,{mus:["shoulders","chest"],how:["Hold a band or towel wide, arms straight","Lift it over your head and behind you, then back","Wider grip if it pinches"],why:"Takes the shoulders through their full range before pressing."}],
+ [/^(Wall or incline|Incline|Wall) push-ups/i,{lib:"Incline_Push-Up",mus:["chest","triceps","shoulders"],how:["Hands on a wall, bench or rack, body straight","Lower your chest toward your hands, then push away","Easy pace; this is practice, not a set"],why:"A light rehearsal of pressing for the chest, shoulders and arms."}],
+ [/^Wrist/i,{mus:["biceps","triceps"],how:["Circle your wrists 10 each way","Add slow elbow bends if you're doing arms"],why:"Wrists and elbows take a lot of load in presses and curls."}],
+ [/^Shoulder rolls/i,{mus:["upper_back","shoulders"],how:["Lift your shoulders to your ears, roll them back and down","Slow, 10 times, then forward"],why:"Loosens the upper traps and neck."}],
+ [/^Light curls/i,{mus:["biceps"],how:["Very light dumbbells, or just your arms","15 easy reps, full range"],why:"Warms the elbows before arm work."}],
+ [/^Cat-cow/i,{lib:"Cat_Stretch",mus:["lower_back","upper_back","abs"],how:["On hands and knees","Round your back up like a cat, then let it sag and look up","Slowly, with your breath"],why:"Moves the whole spine before rows, hinges and core work."}],
+ [/^Bird dog/i,{mus:["lower_back","glutes","abs"],how:["On hands and knees, back flat","Reach one arm forward and the opposite leg back","Hold a second, switch; keep the hips level"],why:"Switches on the deep core and lower back so they protect your spine."}],
+ [/^Dead bug/i,{lib:"Dead_Bug",mus:["abs"],how:["On your back, arms up, knees bent over the hips","Lower one arm and the opposite leg toward the floor","Lower back stays pressed down; switch sides"],why:"Switches on the core before you lift."}],
+ [/^Dead hang/i,{mus:["lats","biceps"],how:["Hang from a pull-up bar, arms straight, feet off the floor or lightly touching","Relax and breathe for 20 seconds"],why:"Stretches the lats and decompresses the spine before back work."}],
+ [/^Hip hinge/i,{mus:["hamstrings","glutes","lower_back"],how:["Hold a stick along your back: head, upper back and tailbone touch it","Push your hips back with soft knees, keep all three points on the stick","Stand up by squeezing the glutes"],why:"Teaches the hip hinge for Romanian deadlifts and rows, so your back stays flat."}],
+ [/^Hip circles/i,{lib:"Standing_Hip_Circles",mus:["glutes","hamstrings"],how:["Hands on hips, feet apart","Draw big slow circles with your hips","5 each way"],why:"Loosens the hips and lower back."}],
+ [/^Scapula push-ups/i,{mus:["chest","upper_back"],how:["Push-up position or against a wall, arms straight","Let your chest sink between your shoulder blades, then push it away","Arms stay straight the whole time"],why:"Gets the shoulder blades moving before pressing."}]
+];
+const warmInfo = t => (WARM_INFO.find(([re])=>re.test(t))||[])[1]||null;
+function warmRows(items){
+  const o=S.active.warm||{};
+  return `<div class="warmlist">${items.map(([k,t])=>{ const inf=warmInfo(t);
+    return `<div class="warmrow ${o[k]?"on":""}"><button class="tick ${o[k]?"on":""}" data-act="warm" data-k="${k}"><span class="box"></span><span>${esc(t)}</span></button>
+      ${inf?`<details class="winfo"><summary>${inf.mus?.length?`Warms ${esc(inf.mus.map(m=>MUSCLES[m]?.n).filter(Boolean).join(", ").toLowerCase())}`:"How to"} <span class="chev">›</span></summary>
+        <div class="winfo-in">${inf.lib?photosHTML(inf.lib,1):""}
+          <div class="winfo-txt">${inf.mus?.length?`<span class="stfig">${bodyFig(Object.fromEntries(inf.mus.map(m=>[m,1])),{cls:"mini"})}</span>`:""}
+          <ol class="steps">${inf.how.map(h=>`<li>${esc(h)}</li>`).join("")}</ol></div>
+          <p class="small muted" style="margin:0"><b>Why:</b> ${esc(inf.why)}</p>
+          <a class="pill vid" href="https://www.youtube.com/results?search_query=${encodeURIComponent(t.replace(/[,×].*$/,"").trim()+" warm up how to")}" target="_blank" rel="noopener">▶ Watch a video</a></div></details>`:""}</div>`; }).join("")}</div>`;
+}
+const STRETCH_HOW={
+ On_Your_Side_Quad_Stretch:["Lie on your side, bottom arm under your head","Bend your top knee and hold that ankle behind you","Gently push your hip forward until you feel the front of the thigh"],
+ Standing_Hip_Flexors:["Step one foot well forward into a short lunge","Tuck your tailbone under and shift your weight forward","Feel it at the front of the back leg's hip; reach that arm up to add more"],
+ Kneeling_Hip_Flexor:["Kneel on one knee, other foot in front","Squeeze the glute of the kneeling leg and shift forward","Keep your chest tall"],
+ Seated_Floor_Hamstring_Stretch:["Sit with legs straight out","Hinge forward from the hips with a long back","Reach toward your feet only as far as you can with a flat back"],
+ Standing_Toe_Touches:["Stand with soft knees","Hinge at the hips and let your upper body hang","Let your head and arms relax toward the floor"],
+ Ankle_On_The_Knee:["Lie on your back, cross one ankle over the other knee","Pull the bottom leg toward your chest","Feel it deep in the glute of the crossed leg"],
+ Knee_Across_The_Body:["Lie on your back, pull one knee across your body","Keep both shoulders on the floor","Feel it in the side of the glute and lower back"],
+ Calf_Stretch_Hands_Against_Wall:["Hands on a wall, one foot back","Back leg straight, heel pressed to the floor","Lean in until the calf stretches; bend the knee a little to reach lower"],
+ Elbows_Back:["Stand tall, hands on your lower back","Draw your elbows back toward each other","Lift your chest; feel it across the front"],
+ Chest_And_Front_Of_Shoulder_Stretch:["Hold a stick or towel behind you, hands wide","Lift it gently away from your back","Chest stays up, shoulders down"],
+ Shoulder_Stretch:["Bring one arm across your chest","Hold it above the elbow with the other hand","Pull gently; keep the shoulder down"],
+ Side_Wrist_Pull:["Reach one arm across and down in front of you","Hold that wrist with the other hand","Pull gently down and across; tilt your head away for more"],
+ Triceps_Stretch:["Reach one arm overhead and bend the elbow, hand down your back","Hold the elbow with the other hand","Ease it back gently"],
+ Tricep_Side_Stretch:["Bring one bent arm across the front of your body","Press it toward you at the elbow","Feel it at the back of the upper arm"],
+ Standing_Biceps_Stretch:["Clasp your hands behind your back, palms down","Straighten your arms and lift them a little","Feel it in the front of the arms and chest"],
+ One_Arm_Against_Wall:["Place one forearm high on a wall or rack","Step through and lean your chest toward the floor","Feel it down the side of your back"],
+ "Side-Lying_Floor_Stretch":["Lie on your side, arms reaching overhead","Let your top arm and leg lengthen away from each other","Feel it along your side"],
+ Upper_Back_Stretch:["Clasp your hands in front, arms straight","Round your upper back and push your hands away","Let your head drop slightly"],
+ Childs_Pose:["Kneel, sit back toward your heels","Reach your arms forward on the floor","Breathe into your back; walk your hands to one side for the lats"],
+ Hug_Knees_To_Chest:["Lie on your back","Hug both knees to your chest","Rock gently side to side if it helps"],
+ Cat_Stretch:["On hands and knees","Round your back up and hold","Then let it sag gently and hold"],
+ Standing_Lateral_Stretch:["Stand tall, feet apart","Reach one arm up and over to the side","Keep your hips still; feel it down your side"],
+ Overhead_Stretch:["Interlace your fingers above your head","Push your palms up and lengthen tall","Breathe out and reach a little higher"]
+};

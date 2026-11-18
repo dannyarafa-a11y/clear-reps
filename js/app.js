@@ -923,7 +923,7 @@ function warmView(day){
   return `<section class="stage"><div class="eyebrow">Step 1</div><h1 class="title">Warm up</h1><p class="muted">About 8 minutes. Gets the joints moving so the lifts feel smoother.</p></section>
     ${watchNote()}
     ${preBrief(S.active,day)}
-    ${tickList(items,"warm")}
+    ${warmRows(items)}
     <div class="note">First exercise: do 2 light practice sets before your real ones. Don't log them.</div>
     <div class="dock"><button class="btn primary xl block" data-act="step" data-i="1">I'm warm · start lifting</button></div>`;
 }
@@ -979,6 +979,8 @@ function stretchView(day){
   const w=S.active, picks=coolDownFor(w), o=w.cool||{};
   const rows=picks.length?picks.map((p,i)=>`<section class="stcard ${o[p.id]?"on":""}"><div class="sthead"><span class="stn num">${i+1}</span><div class="tt"><b>${esc(p.n)}</b><small>Stretches ${esc(p.mus.map(m=>MUSCLES[m]?.n).join(", ").toLowerCase())}${p.per?" · "+p.per:""} · hold 30–45s</small></div><span class="stfig">${bodyFig(Object.fromEntries(p.mus.map(m=>[m,1])),{cls:"mini"})}</span></div>
       ${photosHTML(p.id,1)}
+      ${STRETCH_HOW[p.id]?`<ol class="steps">${STRETCH_HOW[p.id].map(h=>`<li>${esc(h)}</li>`).join("")}</ol>`:""}
+      <p class="small muted" style="margin:0"><b>You should feel it in:</b> ${esc(p.mus.map(m=>MUSCLES[m]?.n).join(", ").toLowerCase())}. A gentle pull, never pain. Breathe out and sink a little deeper each breath.</p>
       <a class="pill vid" href="https://www.youtube.com/results?search_query=${encodeURIComponent(p.n+" how to")}" target="_blank" rel="noopener">▶ Watch a video</a>
       <div class="row"><button class="btn" data-act="hold" data-n="${esc(p.n)}">⏱ Hold 40s</button><button class="tick ${o[p.id]?"on":""}" data-act="cool" data-k="${esc(p.id)}"><span class="box"></span><span>${o[p.id]?"Done":"Mark done"}</span></button></div></section>`).join("")
     :day.cool.map((t,i)=>`<div class="tickrow"><button class="tick ${o[i]?"on":""}" data-act="cool" data-k="${i}"><span class="box"></span><span>${esc(t)}</span></button><button class="pill" data-act="hold" data-n="${esc(t)}">40s</button></div>`).join("");
@@ -1675,7 +1677,7 @@ document.addEventListener("click",async ev=>{
   else if(a==="s-pair"){ togglePair(+b.dataset.i); }
   else if(a==="s-rm"){ if(b.dataset.confirm!=="1"){ b.dataset.confirm="1"; b.textContent="?"; b.classList.add("warn"); setTimeout(()=>{ if(b.isConnected){ b.dataset.confirm=""; b.textContent="×"; b.classList.remove("warn"); } },2500); return; } removeEx(+b.dataset.i); }
   else if(a==="setw"){ const s=S.active.sets.find(x=>x.k===b.dataset.k); if(s){ const old=s.w; s.w=+b.dataset.v; carryForward(s,"w",old); updateLogger(); saveActiveSoon(); } }
-  else if(a==="warm"||a==="cool"){ const o=S.active[a]=S.active[a]||{}; o[b.dataset.k]=!o[b.dataset.k]; b.classList.toggle("on",!!o[b.dataset.k]); const sc=b.closest(".stcard"); if(sc){ const sm=$("#stretchmap"); if(sm) sm.outerHTML=stretchMap(S.active,coolDownFor(S.active)); sc.classList.toggle("on",!!o[b.dataset.k]); const l=b.querySelector("span:last-child"); if(l) l.textContent=o[b.dataset.k]?"Done":"Mark done"; } saveActiveSoon(); }
+  else if(a==="warm"||a==="cool"){ const o=S.active[a]=S.active[a]||{}; o[b.dataset.k]=!o[b.dataset.k]; b.classList.toggle("on",!!o[b.dataset.k]); b.closest(".warmrow")?.classList.toggle("on",!!o[b.dataset.k]); const sc=b.closest(".stcard"); if(sc){ const sm=$("#stretchmap"); if(sm) sm.outerHTML=stretchMap(S.active,coolDownFor(S.active)); sc.classList.toggle("on",!!o[b.dataset.k]); const l=b.querySelector("span:last-child"); if(l) l.textContent=o[b.dataset.k]?"Done":"Mark done"; } saveActiveSoon(); }
   else if(a==="hold"){ startRest(40,"Hold · "+(b.dataset.n||"stretch"),"Breathe slowly, both sides"); }
   else if(a==="rpe"){ S.active.rpe=+b.dataset.v; document.querySelectorAll('[data-act="rpe"]').forEach(x=>x.classList.toggle("on",x===b)); saveActiveSoon(); }
   else if(a==="wstep"){

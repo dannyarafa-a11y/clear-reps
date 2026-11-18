@@ -93,6 +93,10 @@ muscles). Male or female figure: `settings.figure`, switch on the Body tab; `BOD
 Body tab has "Get to know your muscles": `MUSCLE_INFO` + `muscleSheet` (what it does, how it feels,
 exercises and stretches for it).
 
+v3.5.0: warm-up moves have details (`WARM_INFO` in smart.js, matched by the start of the text: photo, muscles,
+steps, why, video; rendered by `warmRows`); every cool-down stretch has steps (`STRETCH_HOW`, by library id) and a
+"you should feel it in" line. Any new warm-up text needs a `WARM_INFO` entry.
+
 v3.4.0: Settings has Program (`settings.split`: "full4" default, or "abc" = the old A/B/C split in `ABC_DAYS`;
 `applyBlock` rebuilds `DAYS` in place) and a watch reminder (`settings.watchRemind`, default on, `watchNote`)
 shown at warm-up and before saving. `HOME_DAYS` has home versions for both programs. The plan sheet also has a
