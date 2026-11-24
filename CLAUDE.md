@@ -140,3 +140,9 @@ v3.8.0: Home's pink win tile is now a rotating highlights tile (`highlights`, `h
 recent personal bests, lifts up 8%+ over the last 21 days, and "showing up"; tap to cycle. Progress lists them. Replaced
 `bestWin` (it picked the biggest kg gain ever, so it was stuck on walking lunges). "Lifts gone up" now compares the best of
 the last 30 days with the first session (e1RM); the strength chart opens on his most-trained recent lift unless he picks one.
+
+v3.9.0: timed holds (plank, side plank, any `timed` exercise). Seconds move in 5s steps everywhere (`repStep`, `snapR`):
+prefill, targets ("5 seconds more today") and the ± buttons, so no more 30 → 31 → 32. The logger has a hold timer
+(`holdBox`/`holdStart`/`holdStop` in smart.js, state `S.hold`): 3s get-ready, countdown, chime; per-side holds run each
+side; stopping early logs the seconds held. Easy/Good/Tough now work for bodyweight and timed moves too (Easy adds 2 reps
+or 10s to the next set) and the labels read in seconds for holds (`FEEL_HOLD`).

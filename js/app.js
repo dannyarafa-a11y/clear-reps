@@ -544,8 +544,9 @@ function targetFor(exId){
   /* what he actually did, e.g. "15, 15 and 14" */
   const did=listAnd(top.map(s=>String(+s.r||0)))+u, over=lastR>e.r[1];
   if(e.inc===0){
-    return allTop?{w:0,r:Math.max(e.r[1],lastR),up:true,short:`Beat ${Math.max(e.r[1],lastR)}${u}`,text:`Last time ${did}${over?`, past the ${range} range`:""}. Add a little more.`}
-                 :{w:0,r:Math.min(lastR+1,e.r[1]),short:`${Math.min(lastR+1,e.r[1])}${u}`,text:`Last time ${lastR}${u}. One more today.`};
+    const st=repStep(e), more=e.timed?"5 seconds more":"One more", goal=snapR(e,Math.min(lastR+st,e.r[1]));
+    return allTop?{w:0,r:snapR(e,Math.max(e.r[1],lastR)+st),up:true,short:`Beat ${Math.max(e.r[1],lastR)}${u}`,text:`Last time ${did}${over?`, past the ${range} range`:""}. Add a little more.`}
+                 :{w:0,r:Math.max(goal,lastR),short:`${Math.max(goal,lastR)}${u}`,text:`Last time ${lastR}${u}. ${more} today.`};
   }
   if(allTop){ const st=wStep(exId), nw=+(w+st).toFixed(1); return {w:nw,r:e.r[0],up:true,short:`${nw} kg · ${range}`,text:`Up ${st} kg. Last time you did ${did} reps at ${fmtKg(w)} kg${over?`, past the top of the ${range} range`:`, the top of the ${range} range`}.`}; }
   return {w,r:Math.min(lastR+1,e.r[1]),short:`${w} kg · ${range}`,text:`Same weight as last time (${did} reps). Try for 1 more rep per set.`};
@@ -1083,11 +1084,12 @@ function loggerHTML(day,idx){
         ${bw?"":stepper(cur,"w",ph?"kg each hand":"kg")}
         ${stepper(cur,"r",unit+(e.per?" "+e.per:""))}
       </div>
+      ${e.timed?holdBox(cur,e):""}
       ${ph?`<p class="tiny muted center" id="tot-${cur.k}" style="margin-top:-6px">${totLine(cur.w)}</p>`:""}
       ${qw.length?`<div class="row center quickw">${qw.map(v=>`<button class="pill ${+cur.w===v?"on":""}" data-act="setw" data-k="${cur.k}" data-v="${v}">${fmtKg(v)} kg</button>`).join("")}<button class="pill quiet" data-act="wstep" data-ex="${id}" aria-label="Change weight step">± ${wStep(id)}</button></div>`
         :bw?"":`<div class="row center"><button class="pill quiet" data-act="wstep" data-ex="${id}">Steps of ${wStep(id)} kg · change</button></div>`}
       <div class="q">Done the set? Tap how it felt to log it.</div>
-      <div class="feel">${FEEL.map(f=>`<button data-act="log" data-k="${cur.k}" data-feel="${f.k}" class="f-${f.k}"><b>${f.n}</b><span>${f.d}</span></button>`).join("")}</div>
+      <div class="feel">${FEEL.map(f=>`<button data-act="log" data-k="${cur.k}" data-feel="${f.k}" class="f-${f.k}"><b>${f.n}</b><span>${esc(feelDesc(e,f))}</span></button>`).join("")}</div>
       <div class="row center"><button class="link" data-act="add-set" data-ex="${id}">+ Add a set</button>${sets.length>1?`<button class="link" data-act="del-set" data-ex="${id}">Remove a set</button>`:""}</div>
     </section>`
     :`<section class="logger done"><div class="setlabel">All ${sets.length} sets done ✓</div>
@@ -1210,6 +1212,12 @@ function stepper(s,f,label){
     <button data-act="nudge" data-k="${s.k}" data-f="${f}" data-d="1" aria-label="Increase ${label}">+</button></div><span class="lbl">${esc(label)}</span></div>`;
 }
 const FEEL=[{k:"easy",n:"Easy",d:"4+ reps left",rir:"4"},{k:"good",n:"Good",d:"2–3 left",rir:"2"},{k:"tough",n:"Tough",d:"0–1 left",rir:"0"}];
+/* holds are judged in seconds left in the tank, not reps */
+const FEEL_HOLD={easy:"Could go 15s+ more",good:"About 5–10s left",tough:"Had to stop"};
+const feelDesc=(e,f)=>e.timed?FEEL_HOLD[f.k]:f.d;
+/* holds move in 5-second steps, reps in ones */
+const repStep=e=>e.timed?5:1;
+const snapR=(e,v)=>e.timed?Math.max(5,Math.round(v/5)*5):Math.max(1,Math.round(v));
 
 /* ---------- body (learn) ---------- */
 /* ---------- get to know your muscles ----------
@@ -1722,16 +1730,19 @@ document.addEventListener("click",async ev=>{
   else if(a==="nudge"){
     const s=S.active.sets.find(x=>x.k===b.dataset.k), e=EX[s.ex], f=b.dataset.f, d=+b.dataset.d;
     const step=f==="w"?wStep(s.ex):(e.timed?5:1);
-    const old=s[f], v=Math.max(0,+((parseFloat(s[f])||0)+d*step).toFixed(1)); s[f]=v; carryForward(s,f,old);
+    const old=s[f], raw=(parseFloat(s[f])||0)+d*step, v=f==="r"&&e.timed?Math.max(5,(d>0?Math.floor:Math.ceil)(raw/5)*5):Math.max(0,+raw.toFixed(1)); s[f]=v; carryForward(s,f,old);
     const inp=document.getElementById(`s-${s.k}-${f}`); if(inp) inp.value=v;
     if(f==="w"){ const tot=document.getElementById(`tot-${s.k}`); if(tot) tot.innerHTML=totLine(v); else if(perHand(e)) updateLogger(); }
     saveActiveSoon();
   }
+  else if(a==="hold-start") holdStart(b.dataset.k);
+  else if(a==="hold-stop") holdStop();
   else if(a==="undo"){ const s=S.active.sets.find(x=>x.k===b.dataset.k); s.done=false; s.feel=null; S.hint=""; stopRest(); updateLogger(); saveActiveSoon(); }
   else if(a==="log"){
     const s=S.active.sets.find(x=>x.k===b.dataset.k), e=EX[s.ex], fl=FEEL.find(f=>f.k===b.dataset.feel);
     if(!(+s.r>0)){ toast(`Set your ${e.timed?"seconds":"reps"} first`); return; }
     if(e.inc>0 && !(+s.w>0)){ toast("Set the weight first"); return; }
+    if(S.hold?.k===s.k) holdStop(true);
     s.done=true; s.feel=fl.k; s.rir=fl.rir; if(e.inc===0) s.w=0;
     const nxt=S.active.sets.find(x=>x.ex===s.ex&&!x.done);
     S.hint="";
@@ -1741,6 +1752,8 @@ document.addEventListener("click",async ev=>{
       if(!(+nxt.r>0)) nxt.r=s.r;
       if(e.inc>0 && fl.k==="easy"){ nxt.w=+(+s.w+wStep(s.ex)).toFixed(1); S.hint=`That was easy, so next set is ${fmtKg(nxt.w)} kg`; }
       else if(e.inc>0 && fl.k==="tough" && +s.r<e.r[0]){ nxt.w=Math.max(0,+(+s.w-wStep(s.ex)).toFixed(1)); S.hint=`Dropping to ${fmtKg(nxt.w)} kg to stay in range`; }
+      else if(e.inc===0 && fl.k==="easy"){ nxt.r=snapR(e,+s.r+repStep(e)*(e.timed?2:2)); S.hint=`That was easy, so next set is ${nxt.r} ${e.timed?"seconds":"reps"}`; }
+      else if(e.inc===0 && fl.k==="tough" && +s.r<e.r[0]){ nxt.r=snapR(e,+s.r); S.hint=`Next set: aim for ${nxt.r}${e.timed?"s":""} again. Rest fully first.`; }
       else if(fl.k==="good") S.hint="Right on target. Same again.";
       else if(fl.k==="tough") S.hint="Good effort. Same weight, rest fully.";
     }

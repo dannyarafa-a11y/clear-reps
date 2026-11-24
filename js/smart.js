@@ -113,6 +113,50 @@ function adjustLines(list){
   return ["low","rec","high","over"].filter(t=>groups[t]).map(t=>{ const g=groups[t];
     return `<li><b>${ADJ_HEAD[t]}:</b> ${esc(g.ex.join(", "))}. <span class="muted">${esc(ADJ_WHY[t]([...g.mus]))}</span></li>`; });
 }
+/* ---------- hold timer (plank, side plank, wall sit…) ----------
+   "Start" gives a 3-second get-ready, then counts down the target. Stopping early logs what he held.
+   Per-side holds run one side, then offer the other. Then he taps how it felt, like any set. */
+function holdBox(cur,e){
+  const h=S.hold?.k===cur.k?S.hold:null, two=!!e.per, side=h?.side||1;
+  if(h&&h.run) return `<div class="holdbox run" id="hold-${cur.k}"><div class="hold-ring"><b class="num hold-t">${holdLeft(h)}</b><span class="hold-l">${h.ready>Date.now()?"Get ready":two?(side===1?"First side":"Second side"):"Hold"}</span></div>
+    <button class="btn block" data-act="hold-stop">Stop · log what I held</button></div>`;
+  const label=h?.side===2?`▶ Other side · ${h.target}s`:h?.msg?`↻ Redo the hold · ${h.target}s`:`▶ Start ${cur.r}s hold${two?" · first side":""}`;
+  return `<div class="holdbox" id="hold-${cur.k}">${h?.msg?`<p class="small center">${esc(h.msg)}</p>`:""}<button class="btn primary block" data-act="hold-start" data-k="${cur.k}">${label}</button></div>`;
+}
+function holdLeft(h){ const now=Date.now(); if(h.ready>now) return Math.ceil((h.ready-now)/1000); return Math.max(0,Math.ceil((h.end-now)/1000)); }
+function holdStart(k){
+  const s=S.active.sets.find(x=>x.k===k); if(!s) return; const e=EX[s.ex], sec=S.hold?.k===k&&S.hold.target?S.hold.target:snapR(e,+s.r||e.r[0]);
+  s.r=sec; stopRest(); requestWake?.();
+  const side=S.hold?.k===k&&S.hold.side===2?2:1, ready=Date.now()+3000;
+  S.hold={k,side,run:true,ready,end:ready+sec*1000,total:sec,beeped:false};
+  clearInterval(S.holdT); S.holdT=setInterval(holdTick,200); updateLogger();
+}
+function holdTick(){
+  const h=S.hold; if(!h||!h.run){ clearInterval(S.holdT); return; }
+  const el=document.querySelector(`#hold-${h.k} .hold-t`), lb=document.querySelector(`#hold-${h.k} .hold-l`), now=Date.now();
+  if(!h.go&&h.ready<=now){ h.go=true; try{ navigator.vibrate&&navigator.vibrate(80); }catch(e){} }
+  if(el) el.textContent=holdLeft(h);
+  if(lb&&h.go){ const e=EX[S.active.sets.find(x=>x.k===h.k)?.ex]; lb.textContent=e?.per?(h.side===1?"First side":"Second side"):"Hold"; }
+  if(h.end<=now) holdDone();
+}
+function holdDone(){
+  const h=S.hold; clearInterval(S.holdT); chime();
+  const s=S.active.sets.find(x=>x.k===h.k), e=EX[s.ex];
+  if(e.per&&h.side===1){ S.hold={k:h.k,side:2,run:false,target:h.total,msg:`${h.total}s done. Switch sides.`}; }
+  else S.hold={k:h.k,run:false,target:h.total,msg:`${h.total}s held. Now tap how it felt.`};
+  updateLogger(); saveActiveSoon();
+}
+/* stopped early: log the seconds actually held (the shorter side counts for per-side holds) */
+function holdStop(quiet){
+  const h=S.hold; clearInterval(S.holdT); if(!h){ return; }
+  if(quiet||!h.run){ S.hold=null; return; }
+  const s=S.active.sets.find(x=>x.k===h.k), held=h.go?Math.max(1,Math.floor((Date.now()-h.ready)/1000)):0;
+  if(!h.go){ S.hold=null; updateLogger(); return; }
+  s.r=Math.min(+s.r||held,held);
+  S.hold={k:h.k,run:false,target:h.total,msg:`Held ${s.r}s. Tap how it felt to log it.`};
+  updateLogger(); saveActiveSoon();
+}
+
 /* ---------- prefill from last time ----------
    Each set starts from the matching set last time (set 2 from set 2…), with the level-up applied. */
 function plannedSets(id,n,wf){
@@ -122,7 +166,7 @@ function plannedSets(id,n,wf){
     let w=t.w===""?"":t.w, r=t.r;
     if(ls&&!t.up){
       if(e.inc>0&&+ls.w>0) w=+ls.w;
-      const lr=+ls.r||0; if(lr>0) r=Math.min(Math.max(lr+1,e.r[0]),e.r[1]);
+      const lr=+ls.r||0; if(lr>0) r=e.timed?snapR(e,Math.min(Math.max(lr+5,e.r[0]),Math.max(e.r[1],lr))):Math.min(Math.max(lr+1,e.r[0]),e.r[1]);
     }
     const norm=w;
     if(e.inc===0) w=0; else w=applyWf(id,w,wf??returnState()?.factor);

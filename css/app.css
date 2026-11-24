@@ -714,3 +714,9 @@ ol.steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;f
 .hl-list li{display:flex;gap:12px;align-items:center}
 .hl-ic{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-weight:800;flex:none}
 .hl-pb{background:var(--sun)} .hl-up{background:var(--mint)} .hl-habit{background:var(--pink)}
+/* hold timer (v3.9.0) */
+.holdbox{margin:4px 0 10px;display:grid;gap:8px}
+.holdbox p{margin:0}
+.hold-ring{display:grid;place-items:center;gap:2px;width:150px;height:150px;margin:0 auto;border-radius:50%;background:#FFF8EC;box-shadow:inset 0 0 0 6px #23180F;}
+.hold-t{font-family:"Bricolage Grotesque",sans-serif;font-size:56px;line-height:1}
+.hold-l{font-size:14px}
