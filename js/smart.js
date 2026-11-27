@@ -191,11 +191,13 @@ function holdStop(quiet){
    Each set starts from the matching set last time (set 2 from set 2…), with the level-up applied. */
 function plannedSets(id,n,wf){
   const e=EX[id], t=targetFor(id), last=lastSetsFor(id,S.active?.id), out=[];
+  /* last time climbed (10 → 12 → 14 kg): that was finding the weight, so every set starts at the top one today */
+  const ws=(last?.sets||[]).map(s=>+s.w||0), climbed=e.inc>0&&ws.length>1&&ws.every((v,i)=>!i||v>=ws[i-1])&&ws.at(-1)>ws[0];
   for(let j=0;j<n;j++){
     const ls=last?.sets[Math.min(j,last.sets.length-1)];
     let w=t.w===""?"":t.w, r=t.r;
     if(ls&&!t.up){
-      if(e.inc>0&&+ls.w>0) w=+ls.w;
+      if(e.inc>0&&+ls.w>0) w=climbed&&t.w!==""?+t.w:+ls.w;
       const lr=+ls.r||0; if(lr>0) r=e.timed?snapR(e,Math.min(Math.max(lr+5,e.r[0]),Math.max(e.r[1],lr))):Math.min(Math.max(lr+1,e.r[0]),e.r[1]);
     }
     const norm=w;

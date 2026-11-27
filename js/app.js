@@ -549,6 +549,7 @@ function targetFor(exId){
                  :{w:0,r:Math.max(goal,lastR),short:`${Math.max(goal,lastR)}${u}`,text:`Last time ${lastR}${u}. ${more} today.`};
   }
   if(allTop){ const st=wStep(exId), nw=+(w+st).toFixed(1); return {w:nw,r:e.r[0],up:true,short:`${nw} kg · ${range}`,text:`Up ${st} kg. Last time you did ${did} reps at ${fmtKg(w)} kg${over?`, past the top of the ${range} range`:`, the top of the ${range} range`}.`}; }
+  if(lastR>=e.r[1]&&top.length<last.sets.length) return {w,r:e.r[1],short:`${w} kg · ${range}`,text:`Last time you worked up to ${fmtKg(w)} kg and got ${lastR} reps. Today do every set at ${fmtKg(w)} kg. When they all hit ${e.r[1]}, the weight goes up.`};
   return {w,r:Math.min(lastR+1,e.r[1]),short:`${w} kg · ${range}`,text:`Same weight as last time (${did} reps). Try for 1 more rep per set.`};
 }
 const youtube = id => "https://www.youtube.com/results?search_query="+encodeURIComponent(EX[id].n+" proper form");

@@ -155,3 +155,5 @@ pattern (`recoveryPace`): muscles sore after half+ of 3+ check-ins get ×1.25, n
 workout chips outline recovering groups. Progress has "Your plan" (`planCard`): phase + progress bar + what's next, most-done
 lifts with now / next / goal for the end of the block, recovery right now, and next workout's changes with reasons.
 `stalled` no longer fires when the lift hit the top of the range last time.
+
+v3.10.1: if last time climbed in weight (10 → 12 → 14 kg), every set is prefilled at the top weight (`climbed` in `plannedSets`), and the target text says to do all sets there.
