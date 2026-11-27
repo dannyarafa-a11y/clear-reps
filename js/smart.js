@@ -40,14 +40,42 @@ function loadColor(L,band){
   for(let i=1;i<LOAD_STOPS.length;i++){ const [x0,c0]=LOAD_STOPS[i-1],[x1,c1]=LOAD_STOPS[i]; if(x<=x1) return mixHex(c0,c1,Math.max(0,(x-x0)/(x1-x0))); }
   return LOAD_STOPS.at(-1)[1];
 }
+/* ---------- recovery, by the clock ----------
+   Each muscle carries a "still tired" score from 1 (just hammered) to 0 (fresh) that fades as the hours pass:
+   - trained: 3+ sets on it needs about 48 h, lighter work about 30 h;
+   - sore (from the check-in): very sore about 72 h, a bit sore about 48 h, counted from when he said so;
+   - his own pattern: muscles he often reports sore get 25% longer, ones that never get sore 15% shorter.
+   0.25+ = recovering (one set less), 0.6+ = very tired (two sets less where there are 3+). */
+const REC_H={hard:48,light:30,sore1:48,sore2:72}, REC_ON=.25, REC_HI=.6;
+function recoveryPace(){
+  const by={}; doneWorkouts().forEach(w=>{ if(!w.soreAt) return; const c=sessionCounts(w);
+    Object.entries(c).forEach(([m,n])=>{ if(n<1) return; (by[m]=by[m]||{n:0,s:0}); by[m].n++; if((w.sore||{})[m]>0) by[m].s++; }); });
+  const out={}; Object.entries(by).forEach(([m,v])=>{ if(v.n>=3&&v.s/v.n>=.5) out[m]={f:1.25,k:"slow",...v}; else if(v.n>=4&&v.s===0) out[m]={f:.85,k:"fast",...v}; });
+  return out;
+}
+function recovery(opts={}){
+  const now=opts.now||Date.now(), pace=recoveryPace(), mus={};
+  Object.keys(MUSCLES).forEach(m=>mus[m]={f:0,src:"",left:0});
+  const bump=(m,f,src,left)=>{ if(mus[m]&&f>mus[m].f) mus[m]={f,src,left}; };
+  doneWorkouts().forEach(w=>{ if(w.id===opts.skipId) return;
+    const age=(now-setTimeMs(w))/36e5;
+    if(age>=0&&age<120) Object.entries(sessionCounts(w)).forEach(([m,n])=>{ if(n<1) return; const hard=n>=3, win=(hard?REC_H.hard:REC_H.light)*(pace[m]?.f||1), left=win-age; if(left>0) bump(m,left/win*(hard?1:.6),"trained",left); });
+    const st=Date.parse(w.soreAt||""); if(w.sore&&isFinite(st)){ const a=(now-st)/36e5;
+      Object.entries(w.sore).forEach(([m,l])=>{ if(!(l>0)) return; const win=(l===2?REC_H.sore2:REC_H.sore1)*(pace[m]?.f||1), left=win-a; if(left>0) bump(m,(left/win)*(l===2?1:.7),l===2?"very sore":"a bit sore",left); }); }
+  });
+  return {mus,pace};
+}
+const hoursTxt = h => h<20?`about ${Math.max(1,Math.round(h))} h`:`about ${Math.round(h/12)/2} ${Math.round(h/12)/2===1?"day":"days"}`;
+/* one plain line per recovering muscle: "Chest: very sore, fresh in about 1.5 days" */
+const recWhy = (m,r) => `${MUSCLES[m]?.n||m}: ${r.src==="trained"?"trained recently":r.src}, fresh in ${hoursTxt(r.left)}`;
 const STATUS_TXT={none:"Not trained",light:"Light",building:"Building",good:"Right amount",high:"A lot",over:"Overworked"};
 function muscleStatus(opts){
-  const {load,raw,last}=muscleLoad(opts), band=loadBand(), out={}, sore=soreRecent(48);
+  const {load,raw,last}=muscleLoad(opts), band=loadBand(), out={}, rc=recovery(opts).mus;
   Object.keys(MUSCLES).forEach(m=>{
     const L=load[m], r=raw[m];
     const k = L<.4?"none": L<band.lo*.5?"light": L<band.lo?"building": L<=band.hi?"good": L<=band.hi*1.35?"high":"over";
-    const recovering = (last[m]!==null && last[m]<1.5 && L>=band.lo*.45) || !!sore[m];
-    out[m]={k,L,raw:r,last:last[m],recovering,sore:sore[m]?.l||0,color:k==="none"?null:loadColor(L,band)};
+    const rec=rc[m], recovering=rec.f>=REC_ON;
+    out[m]={k,L,raw:r,last:last[m],recovering,rec,sore:rec.src==="very sore"?2:rec.src==="a bit sore"?1:0,color:k==="none"?null:loadColor(L,band)};
   });
   return {mus:out,band};
 }
@@ -69,7 +97,7 @@ function insightLines(ins){
   const row=(c,h,t,sub)=>`<li><i class="dot" style="background:${c}"></i><span><b>${h}</b> ${esc(t)}${sub?` <span class="muted">${esc(sub)}</span>`:""}</span></li>`;
   const out=[];
   if(ins.needs.length) out.push(row("#3D7DFF","Could use more:",mNames(ins.needs.slice(0,4))+".","Little in the last 7 days."));
-  if(ins.rec.length) out.push(row("#F2A516","Recovering:",mNames(ins.rec.slice(0,4))+".","Trained in the last day or sore."));
+  if(ins.rec.length) out.push(row("#F2A516","Recovering:",mNames(ins.rec.slice(0,4))+".","Still tired from training or soreness."));
   if(ins.over.length) out.push(row("#E5484D","Overworked:",mNames(ins.over)+".","Rest them a few days."));
   if(ins.good.length&&out.length<3) out.push(row("#12A365","Right amount:",mNames(ins.good.slice(0,4))+".",""));
   if(!out.length) out.push(row("#C9D7FF","Fresh start.","Nothing logged in the last 7 days.",""));
@@ -93,15 +121,15 @@ function planAdjust(day,res,ph,st){
     const over=prim.filter(m=>st.mus[m].k==="over"), rec=prim.filter(m=>st.mus[m].recovering), high=prim.filter(m=>st.mus[m].k==="high");
     const low=prim.length&&prim.every(m=>["none","light"].includes(st.mus[m].k)&&!st.mus[m].recovering);
     if(over.length){ n=Math.max(1,base-1); type="over"; mus=over; }
-    else if(rec.length&&base>1){ n=base-1; type="rec"; mus=rec; }
+    else if(rec.length&&base>1){ const hi=rec.some(m=>st.mus[m].rec.f>=REC_HI); n=Math.max(1,base-(hi&&base>=3?2:1)); type="rec"; mus=rec; }
     else if(high.length&&base>2){ n=base-1; type="high"; mus=high; }
-    if(n!==base) adj.push({ex:id,from:base,to:n,type,mus,why:ADJ_WHY[type](mus)});
+    if(n!==base) adj.push({ex:id,from:base,to:n,type,mus,why:type==="rec"?mus.map(m=>recWhy(m,st.mus[m].rec)).join("; ")+".":ADJ_WHY[type](mus)});
   });
   return adj;
 }
 const ADJ_WHY={
   over:m=>`${mNames(m)}: already overworked in the last 7 days.`,
-  rec:m=>`${mNames(m)}: still recovering (trained in the last day or reported sore).`,
+  rec:m=>`${mNames(m)}: still recovering.`,
   high:m=>`${mNames(m)}: already had a lot in the last 7 days.`,
   low:m=>`${mNames(m)}: little or no work this week.`
 };
@@ -111,7 +139,9 @@ function adjustLines(list){
   const groups={};
   (list||[]).forEach(a=>{ if(!EX[a.ex]) return; const t=a.type||(a.to>a.from?"low":"rec"); (groups[t]=groups[t]||{ex:[],mus:new Set()}); groups[t].ex.push(EX[a.ex].n); (a.mus||[]).forEach(m=>groups[t].mus.add(m)); });
   return ["low","rec","high","over"].filter(t=>groups[t]).map(t=>{ const g=groups[t];
-    return `<li><b>${ADJ_HEAD[t]}:</b> ${esc(g.ex.join(", "))}. <span class="muted">${esc(ADJ_WHY[t]([...g.mus]))}</span></li>`; });
+    const st=t==="rec"?muscleStatus({noActive:true}):null, two=t==="rec"&&(list||[]).some(a=>a.type==="rec"&&a.from-a.to>=2);
+    const why=t==="rec"?[...g.mus].filter(m=>st.mus[m]?.recovering).map(m=>recWhy(m,st.mus[m].rec)).join("; ")+".":ADJ_WHY[t]([...g.mus]);
+    return `<li><b>${two?"Fewer sets":ADJ_HEAD[t]}:</b> ${esc(g.ex.join(", "))}. <span class="muted">${esc(why)}</span></li>`; });
 }
 /* ---------- hold timer (plank, side plank, wall sit…) ----------
    "Start" gives a 3-second get-ready, then counts down the target. Stopping early logs what he held.
@@ -396,10 +426,13 @@ function ownSuggest(w,n=6){
     .sort((a,b)=>(seen.has(b)-seen.has(a))||((EX[b].lib?1:0)-(EX[a].lib?1:0))).slice(0,n);
 }
 function ownCard(can){
-  const sel=new Set(S.ownGroups||S.settings?.ownGroups||[]);
+  const sel=new Set(S.ownGroups||S.settings?.ownGroups||[]), rc=recovery().mus;
+  const tiredG=new Set(OWN_GROUPS.filter(([g,ms])=>ms.filter(m=>!["lower_back","calves","rear_delts"].includes(m)||ms.length===1).some(m=>rc[m]?.f>=REC_ON)).map(([g])=>g));
+  const freshG=OWN_GROUPS.map(([g])=>g).filter(g=>!tiredG.has(g));
   return `<section class="card owncard"><div class="eyebrow">Or</div><h3>My own workout</h3>
     <p class="small muted" style="margin:0">Start empty and add each exercise as you do it. What are you planning to train?</p>
-    <div class="mchips">${OWN_GROUPS.map(([g])=>`<button class="mchip ${sel.has(g)?"on":""}" data-act="own-g" data-g="${g}" aria-pressed="${sel.has(g)}">${g}</button>`).join("")}</div>
+    <div class="mchips">${OWN_GROUPS.map(([g,ms])=>`<button class="mchip ${sel.has(g)?"on":""} ${tiredG.has(g)?"tired":""}" data-act="own-g" data-g="${g}" aria-pressed="${sel.has(g)}">${g}</button>`).join("")}</div>
+    ${tiredG.size?`<p class="tiny muted" style="margin:0"><b class="tired-dot"></b> Still recovering: ${esc([...tiredG].join(", "))}. ${freshG.length?`Fresh today: ${esc(freshG.join(", "))}.`:""}</p>`:""}
     <button class="btn block ${sel.size?"primary":""}" data-act="own-start" ${can?"":"disabled"}>${sel.size?`Start · ${[...sel].join(" + ")}`:"Start without a plan"}</button></section>`;
 }
 
@@ -494,7 +527,7 @@ function feelTrend(id,n=3){
 /* stalled: 3 sessions in a row with the same top weight and no more total reps */
 function stalled(id){
   const e=EX[id]; if(!e||e.inc===0) return false;
-  const t=feelTrend(id,3).sessions; if(t.length<3) return false;
+  const t=feelTrend(id,3).sessions; if(t.length<3) return false; if(targetFor(id).up) return false; /* hit the top last time: weight goes up, not stuck */
   const top=ss=>Math.max(...ss.map(s=>+s.w||0)), reps=ss=>ss.reduce((a,s)=>a+(+s.r||0),0);
   return t.every(ss=>top(ss)===top(t[0])) && reps(t[0])<=reps(t[2]);
 }
@@ -521,6 +554,9 @@ function learnAdjust(ids,baseSets){
   const ret=returnState();
   if(ret){ ids.forEach(id=>{ sets[id]=Math.max(1,sets[id]-1); if(ret.factor<1) wf[id]=ret.factor; tag(id,`Easing back in after ${ret.off} days off.`); });
     notes.push({k:"return",t:`<b>Welcome back.</b> ${ret.since?`Session ${ret.since+1} of ${ret.sessions}`:`${ret.off} days off`}, so one set less on everything${ret.factor<1?` and weights about ${Math.round((1-ret.factor)*100)}% lighter`:""}. Your body keeps most of its strength, this just lets the joints catch up.`}); }
+  const lastW=doneWorkouts().find(x=>x.id!==S.active?.id), gapH=lastW?(Date.now()-setTimeMs(lastW))/36e5:null;
+  if(!ret&&gapH!=null&&gapH<30){ const rc=recovery().mus, tired=Object.keys(rc).filter(m=>rc[m].f>=REC_ON&&ids.some(id=>EX[id]?.m.includes(m)));
+    notes.push({k:"b2b",t:`<b>Back-to-back day.</b> ${tired.length?`${esc(mNames(tired.slice(0,4)))} ${tired.length===1?"is":"are"} still recovering from last time, so ${tired.length===1?"it gets":"they get"} fewer sets. The fresh muscles carry today.`:"Nothing you're training today is still recovering, so it runs as planned."}`}); }
   const sf=sessionFeelTrend();
   if(!ret&&sf==="hard"){ const tail=ids.slice(-2); tail.forEach(id=>{ sets[id]=Math.max(1,sets[id]-1); tag(id,"Your last two sessions felt brutal."); }); notes.push({k:"hard",t:`<b>Last two sessions felt brutal.</b> One set less on the last two exercises today.`}); }
   if(!ret&&sf==="easy"&&ph.key!=="deload"){ ids.slice(0,2).forEach(id=>sets[id]=Math.min(5,sets[id]+1)); notes.push({k:"easy",t:`<b>Your last three sessions felt easy.</b> One extra set on the first two exercises.`}); }
@@ -534,6 +570,46 @@ function learnAdjust(ids,baseSets){
 }
 /* lighten by a factor, always at least one weight step, never below one step */
 const applyWf=(id,w,f)=>{ if(!(f<1)||!(+w>0)) return w; const st=wStep(id); return +Math.max(st,Math.min(Math.round(+w*f/st)*st,+w-st)).toFixed(2); };
+
+/* ---------- the plan, in plain words (Progress) ----------
+   Where he is in the cycle, what he's building towards, and what the app is changing next time and why. */
+function planCard(){
+  const n=currentWeek(), ph=phaseFor(n), rows=[];
+  let where, bar=0, next;
+  if(ph.key==="ease"){ where=`Workout ${n+1} of 4 easing in`; bar=n/4; next="Then building: 3 sets on the main lifts, sets end 1–3 reps from failure, weights climb."; }
+  else if(ph.key==="build"){ const k=(n-4)%16; where=`Building · workout ${k+1} of 14`; bar=k/14; next=`${14-k} more building ${14-k===1?"workout":"workouts"}, then 2 lighter ones so your joints catch up. Trainers call that a deload.`; }
+  else { const k=(n-4)%16-13; where=`Lighter workout ${k} of 2`; bar=1; next="Then a fresh building block, starting from where you left off."; }
+  /* the lifts he's doing most, with the next step and a goal for this block */
+  const cnt={}; doneWorkouts().slice(0,8).forEach(w=>new Set((w.sets||[]).filter(s=>s.done).map(s=>s.ex)).forEach(id=>{ if(EX[id]) cnt[id]=(cnt[id]||0)+1; }));
+  const ids=Object.keys(cnt).sort((a,b)=>(cnt[b]-cnt[a])||((EX[b].inc>0)-(EX[a].inc>0))).filter(id=>EX[id].inc>0||EX[id].timed||cnt[id]>=2).slice(0,4);
+  const goals=ids.map(id=>{ const e=EX[id], last=lastSetsFor(id); if(!last) return ""; const t=targetFor(id), u=e.timed?"s":"";
+    const top=last.sets.reduce((a,s)=>(e.inc===0?+s.r>+a.r:(+s.w>+a.w||(+s.w===+a.w&&+s.r>+a.r)))?s:a,last.sets[0]);
+    const now=e.inc===0?`${top.r}${e.timed?"s":" reps"}`:`${fmtKg(top.w)} kg × ${top.r}`;
+    const left=ph.key==="build"?14-((n-4)%16):ph.key==="ease"?18-n:16;
+    const steps=Math.max(1,Math.min(3,Math.floor(left/(cnt[id]>=4?6:10)))); /* each lift comes round about every other workout; weight steps up about every third time */
+    const goal=e.inc===0?`${e.timed?snapR(e,Math.max(+top.r,e.r[1])+5*steps):Math.max(+top.r,e.r[1])+2*steps}${e.timed?"s":" reps"}`:`${fmtKg(+(+(+top.w)+steps*wStep(id)).toFixed(2))} kg × ${e.r[1]}`;
+    return `<li><span class="tt"><b>${esc(e.n)}</b><small class="muted">Now ${esc(now)} · next ${esc(t.short)}</small></span><span class="goal">${esc(goal)}</span></li>`; }).filter(Boolean).join("");
+  /* next workout's changes */
+  const changes=[];
+  { try{ const day=nextDay(), res=resolveDay(day), adj=planAdjust(day,res,ph), adjBy=Object.fromEntries(adj.map(a=>[a.ex,a.to]));
+    const l=learnAdjust(res.ex,Object.fromEntries(res.ex.map((id,i)=>[id,adjBy[id]??setsFor(day,day.ex[i],ph)])));
+    l.notes.forEach(x=>changes.push(`<li>${x.t}</li>`)); changes.push(...adjustLines(adj));
+    const ups=res.ex.filter(id=>targetFor(id).up); if(ups.length) changes.push(`<li><b>Weight goes up:</b> ${esc(ups.map(id=>EX[id].n).join(", "))}. <span class="muted">You hit the top of the range last time.</span></li>`);
+  }catch(e){} }
+  const rc=recovery(), tired=Object.entries(rc.mus).filter(([,r])=>r.f>=REC_ON).sort((a,b)=>b[1].f-a[1].f);
+  const pace=Object.entries(rc.pace);
+  return `<section class="card plancard"><div class="eyebrow">Your plan</div><h3>${esc(where)}</h3>
+    <div class="pbar"><i style="width:${Math.round(bar*100)}%"></i></div>
+    <p class="small muted" style="margin:6px 0 0">${esc(next)}</p>
+    ${goals?`<h4>What you're building</h4><p class="tiny muted" style="margin:0 0 4px">Your most-done lifts. Right: a goal for the end of this block if you keep at it.</p><ul class="goals">${goals}</ul>`:""}
+    <h4>Recovery right now</h4>
+    ${tired.length?`<ul class="recov">${tired.slice(0,5).map(([m,r])=>`<li><i style="width:${Math.round(r.f*100)}%"></i><span>${esc(recWhy(m,r))}</span></li>`).join("")}</ul>`:`<p class="small muted" style="margin:0">Everything is fresh.</p>`}
+    ${pace.length?(()=>{ const sl=pace.filter(([,v])=>v.k==="slow").map(([m])=>m), fa=pace.filter(([,v])=>v.k==="fast").map(([m])=>m);
+      return `<p class="tiny muted" style="margin:6px 0 0">Learned from your check-ins: ${sl.length?`${esc(mNames(sl))} ${sl.length===1?"tends":"tend"} to stay sore, so ${sl.length===1?"it gets":"they get"} more time between sessions. `:""}${fa.length?`${esc(fa.length>3?fa.slice(0,3).map((m,i)=>i?MUSCLES[m].n.toLowerCase():MUSCLES[m].n).join(", ")+` and ${fa.length-3} more`:mNames(fa))} bounce back quickly, so a bit less.`:""}</p>`; })():""}
+    <h4>Next workout: what changes and why</h4>
+    ${changes.length?`<ul class="chg">${changes.join("")}</ul>`:`<p class="small muted" style="margin:0">Nothing changed. It runs as planned.</p>`}
+  </section>`;
+}
 
 /* what the app has learned, in plain words, for the Progress tab */
 function learnedCard(){

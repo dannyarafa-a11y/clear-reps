@@ -1473,6 +1473,7 @@ function viewProgress(){
   }).join("");
   return `${notice()}<header class="top"><div class="eyebrow">Consistency beats intensity</div><h1 class="hello">Progress</h1></header>
   ${progressTiles()}
+  ${planCard()}
   <section class="card"><div class="spread"><h3>Last 8 weeks</h3><span class="small muted">workouts / week</span></div>${weekStrip()}</section>
   <section class="card chart"><div class="spread"><h3>Getting stronger</h3>${opts?`<select id="chartEx" data-act="chart-ex" class="sel">${opts}</select>`:""}</div>
     ${logged.length?strengthChart(S.chartEx):`<p class="small muted">After your first couple of workouts, a line shows each lift going up.</p>`}</section>

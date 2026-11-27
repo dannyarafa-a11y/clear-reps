@@ -146,3 +146,12 @@ prefill, targets ("5 seconds more today") and the ± buttons, so no more 30 → 
 (`holdBox`/`holdStart`/`holdStop` in smart.js, state `S.hold`): 3s get-ready, countdown, chime; per-side holds run each
 side; stopping early logs the seconds held. Easy/Good/Tough now work for bodyweight and timed moves too (Easy adds 2 reps
 or 10s to the next set) and the labels read in seconds for holds (`FEEL_HOLD`).
+
+v3.10.0: recovery by the clock (`recovery()` in smart.js). Each muscle has a 0–1 "still tired" score that fades:
+trained 3+ sets ≈ 48 h, lighter ≈ 30 h; very sore ≈ 72 h, a bit sore ≈ 48 h from the check-in (`REC_H`). His own
+pattern (`recoveryPace`): muscles sore after half+ of 3+ check-ins get ×1.25, never sore over 4+ get ×0.85.
+≥0.25 = recovering (−1 set), ≥0.6 = −2 sets where there are 3+ (`planAdjust`). Brief says why per muscle ("fresh in about
+1.5 days", `recWhy`). Back-to-back days (<30 h since last) get a brief note naming what's still recovering. My own
+workout chips outline recovering groups. Progress has "Your plan" (`planCard`): phase + progress bar + what's next, most-done
+lifts with now / next / goal for the end of the block, recovery right now, and next workout's changes with reasons.
+`stalled` no longer fires when the lift hit the top of the range last time.
